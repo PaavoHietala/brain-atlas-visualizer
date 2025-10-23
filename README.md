@@ -2,7 +2,7 @@
 
 An interactive 3D brain atlas visualizer using VTK.js to display FreeSurfer brain surfaces with anatomical parcellations.
 
-The visualizer is running at [https://hietalp.github.io/brain-atlas-visualizer/](https://hietalp.github.io/brain-atlas-visualizer/).
+The visualizer is running at [https://paavohietala.github.io/brain-atlas-visualizer/](https://paavohietala.github.io/brain-atlas-visualizer/).
 
 ## Setup
 
