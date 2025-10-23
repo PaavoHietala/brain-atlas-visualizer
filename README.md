@@ -8,38 +8,22 @@ The visualizer is running at [https://hietalp.github.io/brain-atlas-visualizer/]
 
 ### Prerequisites
 
-- Python 3.x with MNE-Python
 - Node.js and npm
 - FreeSurfer fsaverage data
 
 ### Installation
 
-1. **Install Python dependencies:**
-   ```bash
-   pip install mne numpy
-   ```
-
-2. **Install Node.js dependencies:**
+1. **Install Node.js dependencies:**
    ```bash
    npm install
    ```
 
-3. **Generate JSON data from FreeSurfer surfaces:**
-   ```bash
-   python generate_data.py
-   ```
-   
-   This will create JSON files in `data/json/`:
-   - `lh_inflated.json` - Left hemisphere geometry and curvature
-   - `rh_inflated.json` - Right hemisphere geometry and curvature
-   - `labels.json` - Anatomical labels from Destrieux atlas
-
-4. **Bundle VTK.js application:**
+2. **Bundle VTK.js application:**
    ```bash
    npm run build
    ```
    
-   This creates `vtk_bundle.js` which is required for the visualization.
+   This creates `./deploy/vtk_bundle.js` which is required for the visualization.
 
 ## Usage
 
@@ -58,7 +42,7 @@ python -m http.server 8000
 
 The project is configured to work with GitHub Pages:
 
-1. Ensure `vtk_bundle.js` is committed (it's needed for the page to work)
+1. Ensure `./deploy/vtk_bundle.js` is committed (it's needed for the page to work)
 2. Push to GitHub
 3. Enable GitHub Pages in repository settings
 4. The visualization will be available at your GitHub Pages URL
@@ -68,17 +52,46 @@ The project is configured to work with GitHub Pages:
 ```
 brain-atlas-visualizer/
 ├── index.html              # Main HTML page
-├── style.css              # Stylesheet
-├── vtk_bundle.js          # Bundled VTK.js application (generated)
-├── generate_data.py       # Python script to export FreeSurfer data
-├── package.json           # Node.js dependencies
+├── style.css               # Stylesheet
+├── package.json            # Node.js dependencies
 ├── data/
-│   ├── fsaverage/        # FreeSurfer fsaverage template
-│   │   ├── surf/         # Surface files (.inflated, .white, .curv)
-│   │   └── label/        # Annotation files (.annot)
-│   └── json/             # Generated JSON files
+│   ├── atlases.json        # Atlas configuration
+│   ├── fsaverage/          # FreeSurfer fsaverage template
+│   │   ├── surf/           # Surface files (.inflated, .white, .pial, .curv)
+│   │   └── label/          # Annotation files (.annot)
+│   └── lookups/            # Human-readable label names (JSON)
+├── src/                    # JavaScript source modules
+├── deploy/
+│   └── vtk_bundle.js       # Bundled VTK.js application (generated)
 └── README.md
 ```
+
+## Citations
+
+### FreeSurfer
+Fischl, B. (2012). FreeSurfer. *NeuroImage*, 62(2), 774-781.  
+https://doi.org/10.1016/j.neuroimage.2012.01.021
+
+### Brain Atlases
+
+**Desikan-Killiany Atlas (aparc)**  
+Desikan, R. S., et al. (2006). An automated labeling system for subdividing the human cerebral cortex on MRI scans into gyral based regions of interest. *NeuroImage*, 31(3), 968-980.  
+https://doi.org/10.1016/j.neuroimage.2006.01.021
+
+**Destrieux Atlas (aparc.a2009s)**  
+Destrieux, C., et al. (2010). Automatic parcellation of human cortical gyri and sulci using standard anatomical nomenclature. *NeuroImage*, 53(1), 1-15.  
+https://doi.org/10.1016/j.neuroimage.2010.06.010
+
+**HCP Multi-Modal Parcellation (HCPMMP1)**  
+Glasser, M. F., et al. (2016). A multi-modal parcellation of human cerebral cortex. *Nature*, 536(7615), 171-178.  
+https://doi.org/10.1038/nature18933
+
+**Yeo 7 and 17 Networks**  
+Yeo, B. T., et al. (2011). The organization of the human cerebral cortex estimated by intrinsic functional connectivity. *Journal of Neurophysiology*, 106(3), 1125-1165.  
+https://doi.org/10.1152/jn.00338.2011
+
+**Brodmann Areas**  
+Brodmann, K. (1909). *Vergleichende Lokalisationslehre der Grosshirnrinde in ihren Prinzipien dargestellt auf Grund des Zellenbaues*. Leipzig: Barth.
 
 ## License Notice
 
