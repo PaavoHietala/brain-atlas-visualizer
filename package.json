@@ -4,8 +4,8 @@
   "description": "",
   "main": "src/main.js",
   "scripts": {
-    "build": "esbuild src/main.js --bundle --outfile=vtk_bundle.js --format=iife",
-    "build:watch": "esbuild src/main.js --bundle --outfile=vtk_bundle.js --format=iife --watch",
+    "build": "esbuild src/main.js --bundle --outfile=deploy/vtk_bundle.js --format=iife",
+    "build:watch": "esbuild src/main.js --bundle --outfile=deploy/vtk_bundle.js --format=iife --watch",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {

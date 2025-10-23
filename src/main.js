@@ -47,10 +47,21 @@ async function loadBrainGeometry(geometry) {
   
   console.log(`Loading ${geometry} surfaces...`);
   
-  // Load both hemispheres
+  // Map geometry names to FreeSurfer file names
+  const geometryFileMap = {
+    'inflated': 'inflated',
+    'original': 'orig',
+    'pial': 'pial',
+    'white': 'white'
+  };
+  
+  const fsGeometry = geometryFileMap[geometry] || geometry;
+  
+  // Load both hemispheres with FreeSurfer binary files
   const lhConfig = getHemisphereConfig('lh');
   await loadHemisphere(
-    `data/json/lh_${geometry}.json`, 
+    `../data/fsaverage/surf/lh.${fsGeometry}`,
+    `../data/fsaverage/surf/lh.curv`,
     'lh', 
     lhConfig.offsetX,
     lhConfig.offsetZ,
@@ -60,7 +71,8 @@ async function loadBrainGeometry(geometry) {
   
   const rhConfig = getHemisphereConfig('rh');
   await loadHemisphere(
-    `data/json/rh_${geometry}.json`, 
+    `../data/fsaverage/surf/rh.${fsGeometry}`,
+    `../data/fsaverage/surf/rh.curv`,
     'rh', 
     rhConfig.offsetX,
     rhConfig.offsetZ,
@@ -150,12 +162,12 @@ async function initializeApp() {
 
     // Load labels data
     console.log('Loading labels...');
-    const labelsData = await loadLabels('data/json/labels.json');
+    const labelsData = await loadLabels('../data/json/labels.json');
     setLabelsData(labelsData);
     console.log('Labels loaded:', Object.keys(labelsData).length);
     
     // Load label names for plain English conversion
-    const labelNamesData = await loadLabelNames('data/aparc.a2009s.lookup.json');
+    const labelNamesData = await loadLabelNames('../data/aparc.a2009s.lookup.json');
     setLabelNamesData(labelNamesData);
     if (labelNamesData) {
       console.log('Label names loaded');
