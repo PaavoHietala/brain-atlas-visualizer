@@ -33,6 +33,20 @@ import {
   loadAnnotationLabels
 } from './loader.js';
 import { createOrientationWidget } from './orientation.js';
+
+// Detect base path for GitHub Pages vs local development
+const getBasePath = () => {
+  const path = window.location.pathname;
+  // If we're on GitHub Pages (path starts with /repo-name/), extract the base
+  const match = path.match(/^\/([^\/]+)\//);
+  if (match && match[1] !== '' && !path.startsWith('/index.html')) {
+    return `/${match[1]}`;
+  }
+  return '';
+};
+
+const BASE_PATH = getBasePath();
+console.log('Base path:', BASE_PATH || '(root)');
 import { resetCamera } from './camera.js';
 import { 
   populateLabelList, 
@@ -72,8 +86,8 @@ async function loadBrainGeometry(geometry) {
   // Load both hemispheres with FreeSurfer binary files
   const lhConfig = getHemisphereConfig('lh');
   await loadHemisphere(
-    `./data/fsaverage/surf/lh.${fsGeometry}`,
-    `./data/fsaverage/surf/lh.curv`,
+    `${BASE_PATH}/data/fsaverage/surf/lh.${fsGeometry}`,
+    `${BASE_PATH}/data/fsaverage/surf/lh.curv`,
     'lh', 
     lhConfig.offsetX,
     lhConfig.offsetZ,
@@ -83,8 +97,8 @@ async function loadBrainGeometry(geometry) {
   
   const rhConfig = getHemisphereConfig('rh');
   await loadHemisphere(
-    `./data/fsaverage/surf/rh.${fsGeometry}`,
-    `./data/fsaverage/surf/rh.curv`,
+    `${BASE_PATH}/data/fsaverage/surf/rh.${fsGeometry}`,
+    `${BASE_PATH}/data/fsaverage/surf/rh.curv`,
     'rh', 
     rhConfig.offsetX,
     rhConfig.offsetZ,
@@ -176,8 +190,8 @@ async function handleAtlasChange(newAtlasId) {
     
     // Load annotation files for this atlas
     const labelsData = await loadAnnotationLabels(
-      `./data/fsaverage/label/${atlasConfig.files.lh}`,
-      `./data/fsaverage/label/${atlasConfig.files.rh}`
+      `${BASE_PATH}/data/fsaverage/label/${atlasConfig.files.lh}`,
+      `${BASE_PATH}/data/fsaverage/label/${atlasConfig.files.rh}`
     );
     
     setLabelsData(labelsData);
@@ -185,7 +199,7 @@ async function handleAtlasChange(newAtlasId) {
     
     // Load lookup file if available
     if (atlasConfig.lookup) {
-      const labelNamesData = await loadLabelNames(`./data/lookups/${atlasConfig.lookup}`);
+      const labelNamesData = await loadLabelNames(`${BASE_PATH}/data/lookups/${atlasConfig.lookup}`);
       setLabelNamesData(labelNamesData);
       if (labelNamesData) {
         console.log('Label names loaded for', atlasConfig.name);
@@ -230,7 +244,7 @@ async function initializeApp() {
 
     // Load atlases configuration
     console.log('Loading atlases configuration...');
-    const atlasesConfig = await loadAtlasesConfig('./data/atlases.json');
+    const atlasesConfig = await loadAtlasesConfig(`${BASE_PATH}/data/atlases.json`);
     setAtlasesConfig(atlasesConfig);
     
     // Find and set default atlas
@@ -241,15 +255,15 @@ async function initializeApp() {
     // Load labels data from annotation files
     console.log('Loading labels from annotation files...');
     const labelsData = await loadAnnotationLabels(
-      `./data/fsaverage/label/${defaultAtlas.files.lh}`,
-      `./data/fsaverage/label/${defaultAtlas.files.rh}`
+      `${BASE_PATH}/data/fsaverage/label/${defaultAtlas.files.lh}`,
+      `${BASE_PATH}/data/fsaverage/label/${defaultAtlas.files.rh}`
     );
     setLabelsData(labelsData);
     console.log('Labels loaded:', Object.keys(labelsData).length);
     
     // Load label names for plain English conversion if available
     if (defaultAtlas.lookup) {
-      const labelNamesData = await loadLabelNames(`./data/lookups/${defaultAtlas.lookup}`);
+      const labelNamesData = await loadLabelNames(`${BASE_PATH}/data/lookups/${defaultAtlas.lookup}`);
       setLabelNamesData(labelNamesData);
       if (labelNamesData) {
         console.log('Label names loaded for', defaultAtlas.name);
