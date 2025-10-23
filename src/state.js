@@ -1,6 +1,26 @@
 // state.js
 // Global application state management
 
+// Geometry-specific hemisphere offsets
+const geometryOffsets = {
+  inflated: {
+    lh: { offsetX: -90, offsetZ: 0, rotateZ: 20 },
+    rh: { offsetX: 90, offsetZ: 0, rotateZ: -20 }
+  },
+  original: {
+    lh: { offsetX: -45, offsetZ: 0, rotateZ: 20 },
+    rh: { offsetX: 45, offsetZ: 0, rotateZ: -20 }
+  },
+  pial: {
+    lh: { offsetX: -45, offsetZ: 0, rotateZ: 20 },
+    rh: { offsetX: 45, offsetZ: 0, rotateZ: -20 }
+  },
+  white: {
+    lh: { offsetX: -45, offsetZ: 0, rotateZ: 20 },
+    rh: { offsetX: 45, offsetZ: 0, rotateZ: -20 }
+  }
+};
+
 export const state = {
   hemisphereData: {
     lh: { 
@@ -8,7 +28,7 @@ export const state = {
       actor: null, 
       mapper: null, 
       polyData: null, 
-      offsetX: -90, 
+      offsetX: -45, 
       offsetZ: 0, 
       rotateZ: 20 
     },
@@ -17,7 +37,7 @@ export const state = {
       actor: null, 
       mapper: null, 
       polyData: null, 
-      offsetX: 90, 
+      offsetX: 45, 
       offsetZ: 0, 
       rotateZ: -20 
     }
@@ -28,7 +48,8 @@ export const state = {
   renderWindow: null,
   renderer: null,
   usePlainEnglishNames: false,
-  currentGeometry: 'inflated'  // Current geometry type
+  currentGeometry: 'pial',  // Current geometry type (default)
+  geometryOffsets: geometryOffsets
 };
 
 /**
@@ -125,10 +146,27 @@ export function isPlainEnglishNamesEnabled() {
 }
 
 /**
- * Set current geometry type
+ * Get geometry-specific offsets for a hemisphere
+ * @param {string} geometry - Geometry type
+ * @param {string} hemi - Hemisphere ('lh' or 'rh')
+ * @returns {Object} Offset configuration
+ */
+export function getGeometryOffsets(geometry, hemi) {
+  return state.geometryOffsets[geometry]?.[hemi] || state.geometryOffsets.pial[hemi];
+}
+
+/**
+ * Set current geometry type and update hemisphere offsets
+ * @param {string} geometry - Geometry type
  */
 export function setCurrentGeometry(geometry) {
   state.currentGeometry = geometry;
+  
+  // Update hemisphere offsets based on geometry
+  ['lh', 'rh'].forEach(hemi => {
+    const offsets = getGeometryOffsets(geometry, hemi);
+    Object.assign(state.hemisphereData[hemi], offsets);
+  });
 }
 
 /**

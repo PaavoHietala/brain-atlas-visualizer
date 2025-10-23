@@ -35749,6 +35749,24 @@ fn main(
   registerOverride2("vtkPixelSpaceCallbackMapper", newInstance113);
 
   // src/state.js
+  var geometryOffsets = {
+    inflated: {
+      lh: { offsetX: -90, offsetZ: 0, rotateZ: 20 },
+      rh: { offsetX: 90, offsetZ: 0, rotateZ: -20 }
+    },
+    original: {
+      lh: { offsetX: -45, offsetZ: 0, rotateZ: 20 },
+      rh: { offsetX: 45, offsetZ: 0, rotateZ: -20 }
+    },
+    pial: {
+      lh: { offsetX: -45, offsetZ: 0, rotateZ: 20 },
+      rh: { offsetX: 45, offsetZ: 0, rotateZ: -20 }
+    },
+    white: {
+      lh: { offsetX: -45, offsetZ: 0, rotateZ: 20 },
+      rh: { offsetX: 45, offsetZ: 0, rotateZ: -20 }
+    }
+  };
   var state = {
     hemisphereData: {
       lh: {
@@ -35756,7 +35774,7 @@ fn main(
         actor: null,
         mapper: null,
         polyData: null,
-        offsetX: -90,
+        offsetX: -45,
         offsetZ: 0,
         rotateZ: 20
       },
@@ -35765,7 +35783,7 @@ fn main(
         actor: null,
         mapper: null,
         polyData: null,
-        offsetX: 90,
+        offsetX: 45,
         offsetZ: 0,
         rotateZ: -20
       }
@@ -35776,8 +35794,9 @@ fn main(
     renderWindow: null,
     renderer: null,
     usePlainEnglishNames: false,
-    currentGeometry: "inflated"
-    // Current geometry type
+    currentGeometry: "pial",
+    // Current geometry type (default)
+    geometryOffsets
   };
   function getHemisphereConfig(hemi) {
     return state.hemisphereData[hemi];
@@ -35820,8 +35839,15 @@ fn main(
   function isPlainEnglishNamesEnabled() {
     return state.usePlainEnglishNames;
   }
+  function getGeometryOffsets(geometry, hemi) {
+    return state.geometryOffsets[geometry]?.[hemi] || state.geometryOffsets.pial[hemi];
+  }
   function setCurrentGeometry(geometry) {
     state.currentGeometry = geometry;
+    ["lh", "rh"].forEach((hemi) => {
+      const offsets = getGeometryOffsets(geometry, hemi);
+      Object.assign(state.hemisphereData[hemi], offsets);
+    });
   }
   function getCurrentGeometry() {
     return state.currentGeometry;
@@ -37971,7 +37997,32 @@ fn main(
     const renderer = getRenderer();
     const renderWindow = getRenderWindow();
     if (renderer) {
+      const camera = renderer.getActiveCamera();
       renderer.resetCamera();
+      const focalPoint = camera.getFocalPoint();
+      const distance3 = camera.getDistance();
+      const tiltX = -45 * Math.PI / 180;
+      const rotZ = -150 * Math.PI / 180;
+      let dirX = 0;
+      let dirY = -1;
+      let dirZ = 0;
+      const tempX = dirX * Math.cos(rotZ) - dirY * Math.sin(rotZ);
+      const tempY = dirX * Math.sin(rotZ) + dirY * Math.cos(rotZ);
+      dirX = tempX;
+      dirY = tempY;
+      const tempY2 = dirY * Math.cos(tiltX) - dirZ * Math.sin(tiltX);
+      const tempZ2 = dirY * Math.sin(tiltX) + dirZ * Math.cos(tiltX);
+      dirY = tempY2;
+      dirZ = tempZ2;
+      const position = [
+        focalPoint[0] - dirX * distance3,
+        focalPoint[1] - dirY * distance3,
+        focalPoint[2] - dirZ * distance3
+      ];
+      camera.setPosition(...position);
+      camera.setFocalPoint(...focalPoint);
+      camera.setViewUp(0, 0, 1);
+      renderer.resetCameraClippingRange();
     }
     if (renderWindow) {
       renderWindow.render();

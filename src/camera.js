@@ -74,14 +74,61 @@ export function positionCameraForLabel(center, normal, distance = 800) {
 }
 
 /**
- * Reset camera to view entire scene
+ * Reset camera to view entire scene with custom orientation
  */
 export function resetCamera() {
   const renderer = getRenderer();
   const renderWindow = getRenderWindow();
   
   if (renderer) {
+    const camera = renderer.getActiveCamera();
+    
+    // First, reset to default to get bounds and distance
     renderer.resetCamera();
+    
+    // Get the current focal point and distance
+    const focalPoint = camera.getFocalPoint();
+    const distance = camera.getDistance();
+    
+    // Apply rotations:
+    // 1. Tilt 135 degrees back on X-axis (left-right axis)
+    // 2. Rotate 135 degrees clockwise on Z-axis (down-up axis)
+    
+    // Start with camera looking along -Y axis (VTK default after reset)
+    // Then apply transformations
+    
+    const tiltX = -45 * Math.PI / 180;   // 135 degrees back (rotation around X-axis)
+    const rotZ = -150 * Math.PI / 180;   // 135 degrees clockwise (rotation around Z-axis)
+    
+    // Initial direction vector (looking along -Y)
+    let dirX = 0;
+    let dirY = -1;
+    let dirZ = 0;
+    
+    // Apply rotation around Z-axis first (anticlockwise when looking down)
+    const tempX = dirX * Math.cos(rotZ) - dirY * Math.sin(rotZ);
+    const tempY = dirX * Math.sin(rotZ) + dirY * Math.cos(rotZ);
+    dirX = tempX;
+    dirY = tempY;
+    
+    // Apply rotation around X-axis (tilt back)
+    const tempY2 = dirY * Math.cos(tiltX) - dirZ * Math.sin(tiltX);
+    const tempZ2 = dirY * Math.sin(tiltX) + dirZ * Math.cos(tiltX);
+    dirY = tempY2;
+    dirZ = tempZ2;
+    
+    // Set camera position based on rotated direction
+    const position = [
+      focalPoint[0] - dirX * distance,
+      focalPoint[1] - dirY * distance,
+      focalPoint[2] - dirZ * distance
+    ];
+    
+    camera.setPosition(...position);
+    camera.setFocalPoint(...focalPoint);
+    camera.setViewUp(0, 0, 1); // Z-axis points up
+    
+    renderer.resetCameraClippingRange();
   }
   
   if (renderWindow) {

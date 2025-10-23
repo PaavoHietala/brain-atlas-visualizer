@@ -2,15 +2,7 @@
 
 An interactive 3D brain atlas visualizer using VTK.js to display FreeSurfer brain surfaces with anatomical parcellations.
 
-## Features
-
-- Interactive 3D visualization of brain hemispheres
-- FreeSurfer fsaverage template with inflated surface
-- Curvature-based shading for realistic brain appearance
-- Anatomical parcellation labels (Destrieux atlas)
-- Interactive sidebar with clickable labels organized by hemisphere
-- Click any label to highlight it on the brain surface
-- Dual-hemisphere view with separated left and right hemispheres
+The visualizer is running at [https://hietalp.github.io/brain-atlas-visualizer/](https://hietalp.github.io/brain-atlas-visualizer/).
 
 ## Setup
 
@@ -77,7 +69,6 @@ The project is configured to work with GitHub Pages:
 brain-atlas-visualizer/
 ├── index.html              # Main HTML page
 ├── style.css              # Stylesheet
-├── bundle_entry.js         # VTK.js application source
 ├── vtk_bundle.js          # Bundled VTK.js application (generated)
 ├── generate_data.py       # Python script to export FreeSurfer data
 ├── package.json           # Node.js dependencies
@@ -89,52 +80,20 @@ brain-atlas-visualizer/
 └── README.md
 ```
 
-## Modifying the Visualization
+## License Notice
 
-### Change Surface Type
+### 1. Visualization Code
+All website code, JavaScript modules, and build scripts in this repository are released under the **BSD 3-Clause License** (see `license/LICENSE.md`).
 
-To visualize different surfaces (white, pial, sphere), edit `generate_data.py`:
+### 2. FreeSurfer Data
+This project includes data (fsaverage surfaces and annotation files) obtained under license from
+The General Hospital Corporation (MGH) as part of the FreeSurfer package.
 
-```python
-surf_path = Path(subjects_dir) / subject / "surf" / f"{hemi_name}.white"  # or .pial, .sphere
-```
+All such data are subject to the FreeSurfer Software License Agreement, included in `license/FREESURFER.md`.
 
-### Adjust Curvature Coloring
+FreeSurfer © The General Hospital Corporation (MGH). All rights reserved.
 
-Modify the color lookup table in `bundle_entry.js`:
-
-```javascript
-// Adjust these RGB values and scalar positions
-lookupTable.addRGBPoint(-1.0, 0.3, 0.3, 0.3);  // dark for sulci
-lookupTable.addRGBPoint(1.0, 0.95, 0.95, 0.95); // light for gyri
-```
-
-### Separate Hemispheres
-
-Adjust the offset values in `bundle_entry.js`:
-
-```javascript
-await loadHemisphere('data/json/lh_inflated.json', -50, renderer);  // Increase/decrease offset
-await loadHemisphere('data/json/rh_inflated.json', 50, renderer);
-```
-
-## Dependencies
-
-### Python
-- `mne` - MNE-Python for neuroimaging data processing
-- `numpy` - Numerical computations
-
-### JavaScript (Node.js)
-- `@kitware/vtk.js` - 3D visualization toolkit
-- `webpack` - Module bundler
-- `webpack-cli` - Webpack command line interface
-
-## License
-
-[Specify your license here]
-
-## Acknowledgments
-
-- FreeSurfer fsaverage template
-- VTK.js visualization library
-- MNE-Python for neuroimaging tools
+### 3. VTK.js
+The visualization uses [VTK.js](https://kitware.github.io/vtk-js/),  
+a BSD-3-Clause licensed JavaScript library for 3D visualization.  
+The license is included in `license/VTK-JS.md`.
