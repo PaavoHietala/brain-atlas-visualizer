@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Brain Atlas Viewer</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="sidebar">
+    <div class="sidebar-header">
+      <h2>Brain Atlas Viewer</h2>
+    </div>
+    <div class="sidebar-header">
+      <h2>Atlas Labels</h2>
+      <div class="button-group">
+        <button id="help-btn" class="icon-btn" title="View Instructions">ℹ️</button>
+        <button id="toggle-names-btn" class="icon-btn" title="Toggle Label Names">Aa</button>
+      </div>
+    </div>
+    <div id="labels-container">
+      <div class="hemisphere-column">
+        <h3>Left Hemisphere</h3>
+        <ul class="label-list" id="labels-lh"></ul>
+      </div>
+      <div class="hemisphere-column">
+        <h3>Right Hemisphere</h3>
+        <ul class="label-list" id="labels-rh"></ul>
+      </div>
+    </div>
+  </div>
+  <div id="vtk-container">
+    <div class="loading">Loading brain model</div>
+  </div>
+
+  <!-- Instructions Modal -->
+  <div id="instructions-modal" class="modal">
+    <div class="modal-content">
+      <span class="close">&times;</span>
+      <h2>Brain Atlas Viewer - Instructions</h2>
+      <div class="instructions">
+        <h3>🖱️ Camera Controls</h3>
+        <ul>
+          <li><strong>Left Click + Drag:</strong> Rotate the view (about object)</li>
+          <li><strong>Shift + Click + Drag:</strong> Pan the view</li>
+          <li><strong>Ctrl + Click + Drag:</strong> Rotate the camera</li>
+          <li><strong>Scroll Wheel:</strong> Zoom in/out</li>
+        </ul>
+        
+        <h3>🧠 Label Selection</h3>
+        <ul>
+          <li><strong>Click a label:</strong> Highlights the region in red/orange and automatically focuses the camera</li>
+          <li><strong>Click same label again:</strong> Deselects and returns to full brain view</li>
+          <li>Only one label can be active at a time</li>
+        </ul>
+        
+        <h3>🎨 Visualization</h3>
+        <ul>
+          <li><strong>Gray shading:</strong> Shows sulcal depth (darker = sulci, lighter = gyri)</li>
+          <li><strong>Orientation widget:</strong> Bottom-left corner shows current view direction with colored axes</li>
+          <li><strong>Coordinate system:</strong> FreeSurfer RAS orientation (Red = X; Yellow = Y; Green = Z)</li>
+          <li>Hemispheres are rotated outward to show medial surfaces</li>
+        </ul>
+        
+        <h3>⚙️ Options</h3>
+        <ul>
+          <li><strong>Aa button:</strong> Toggle between technical FreeSurfer names and plain English descriptions</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main script -->
+  <script src="./vtk_bundle.js"></script>
+</body>
+</html>

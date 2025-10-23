@@ -1,0 +1,28 @@
+{
+  "name": "brain-atlas-visualizer",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/main.js",
+  "scripts": {
+    "build": "esbuild src/main.js --bundle --outfile=vtk_bundle.js --format=iife",
+    "build:watch": "esbuild src/main.js --bundle --outfile=vtk_bundle.js --format=iife --watch",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/PaavoHietala/brain-atlas-visualizer.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/PaavoHietala/brain-atlas-visualizer/issues"
+  },
+  "homepage": "https://github.com/PaavoHietala/brain-atlas-visualizer#readme",
+  "dependencies": {
+    "@kitware/vtk.js": "^34.14.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.11"
+  }
+}

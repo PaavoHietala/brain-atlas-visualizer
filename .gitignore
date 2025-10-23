@@ -1,0 +1,35 @@
+# Node modules
+node_modules/
+
+# Build artifacts (keep the bundled files for GitHub Pages)
+# vtk_bundle.js should be committed for GitHub Pages to work
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# FreeSurfer data
+data/fsaverage/
