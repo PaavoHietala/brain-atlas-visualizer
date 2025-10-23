@@ -55,7 +55,7 @@ export function positionCameraForLabel(center, normal, distance = 800) {
     
     camera.setPosition(...currentPos);
     camera.setFocalPoint(...currentFocal);
-    camera.setViewUp(0, 1, 0); // Keep Y as up direction
+    camera.setViewUp(0, 0, 1); // Set Z-axis (green) as up direction
     
     renderer.resetCameraClippingRange();
     

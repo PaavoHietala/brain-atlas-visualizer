@@ -11,6 +11,18 @@
     <div class="sidebar-header">
       <h2>Brain Atlas Viewer</h2>
     </div>
+    
+    <!-- Geometry Selector -->
+    <div class="geometry-selector">
+      <label for="geometry-select">Surface Geometry:</label>
+      <select id="geometry-select">
+        <option value="inflated" selected>Inflated (Default)</option>
+        <option value="original">Original</option>
+        <option value="pial">Pial (Outer)</option>
+        <option value="white">White Matter</option>
+      </select>
+    </div>
+    
     <div class="sidebar-header">
       <h2>Atlas Labels</h2>
       <div class="button-group">
@@ -64,6 +76,7 @@
         
         <h3>⚙️ Options</h3>
         <ul>
+          <li><strong>Surface Geometry:</strong> Switch between different brain surface representations (Inflated, Original, Pial, White Matter)</li>
           <li><strong>Aa button:</strong> Toggle between technical FreeSurfer names and plain English descriptions</li>
         </ul>
       </div>

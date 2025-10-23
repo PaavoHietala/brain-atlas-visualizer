@@ -35775,7 +35775,9 @@ fn main(
     currentSelectedLabel: null,
     renderWindow: null,
     renderer: null,
-    usePlainEnglishNames: false
+    usePlainEnglishNames: false,
+    currentGeometry: "inflated"
+    // Current geometry type
   };
   function getHemisphereConfig(hemi) {
     return state.hemisphereData[hemi];
@@ -35817,6 +35819,12 @@ fn main(
   }
   function isPlainEnglishNamesEnabled() {
     return state.usePlainEnglishNames;
+  }
+  function setCurrentGeometry(geometry) {
+    state.currentGeometry = geometry;
+  }
+  function getCurrentGeometry() {
+    return state.currentGeometry;
   }
 
   // src/geometry.js
@@ -35867,6 +35875,7 @@ fn main(
     const sinAngle = Math.sin(angleRad);
     let centerX = 0, centerY = 0, centerZ = 0;
     let normalX = 0, normalY = 0, normalZ = 0;
+    const labelVertexSet = new Set(vertices);
     vertices.forEach((idx) => {
       const x = meshData.vertices[idx][0];
       const y = meshData.vertices[idx][1];
@@ -35879,19 +35888,50 @@ fn main(
       centerX += finalX;
       centerY += finalY;
       centerZ += finalZ;
-      normalX += rotatedX;
-      normalY += rotatedY;
-      normalZ += z;
     });
     const count = vertices.length;
     centerX /= count;
     centerY /= count;
     centerZ /= count;
-    const normalLength = Math.sqrt(normalX * normalX + normalY * normalY + normalZ * normalZ);
-    if (normalLength > 0) {
-      normalX /= normalLength;
-      normalY /= normalLength;
-      normalZ /= normalLength;
+    let triangleCount = 0;
+    meshData.triangles.forEach((triangle) => {
+      const v0_in = labelVertexSet.has(triangle[0]);
+      const v1_in = labelVertexSet.has(triangle[1]);
+      const v2_in = labelVertexSet.has(triangle[2]);
+      if (v0_in && v1_in || v1_in && v2_in || v0_in && v2_in) {
+        const v0 = meshData.vertices[triangle[0]];
+        const v1 = meshData.vertices[triangle[1]];
+        const v2 = meshData.vertices[triangle[2]];
+        const edge1 = [v1[0] - v0[0], v1[1] - v0[1], v1[2] - v0[2]];
+        const edge2 = [v2[0] - v0[0], v2[1] - v0[1], v2[2] - v0[2]];
+        const nx = edge1[1] * edge2[2] - edge1[2] * edge2[1];
+        const ny = edge1[2] * edge2[0] - edge1[0] * edge2[2];
+        const nz = edge1[0] * edge2[1] - edge1[1] * edge2[0];
+        const rotatedNx = nx * cosAngle - ny * sinAngle;
+        const rotatedNy = nx * sinAngle + ny * cosAngle;
+        normalX += rotatedNx;
+        normalY += rotatedNy;
+        normalZ += nz;
+        triangleCount++;
+      }
+    });
+    if (triangleCount > 0) {
+      const normalLength = Math.sqrt(normalX * normalX + normalY * normalY + normalZ * normalZ);
+      if (normalLength > 0) {
+        normalX /= normalLength;
+        normalY /= normalLength;
+        normalZ /= normalLength;
+      }
+    } else {
+      normalX = centerX - offsetX;
+      normalY = centerY;
+      normalZ = centerZ - offsetZ;
+      const normalLength = Math.sqrt(normalX * normalX + normalY * normalY + normalZ * normalZ);
+      if (normalLength > 0) {
+        normalX /= normalLength;
+        normalY /= normalLength;
+        normalZ /= normalLength;
+      }
     }
     return {
       center: [centerX, centerY, centerZ],
@@ -37915,7 +37955,7 @@ fn main(
       ];
       camera.setPosition(...currentPos);
       camera.setFocalPoint(...currentFocal);
-      camera.setViewUp(0, 1, 0);
+      camera.setViewUp(0, 0, 1);
       renderer.resetCameraClippingRange();
       const renderWindow = getRenderWindow();
       if (renderWindow) {
@@ -38115,6 +38155,13 @@ fn main(
       }
     });
   }
+  function showLoading() {
+    const loadingEl = document.querySelector(".loading");
+    if (loadingEl) {
+      loadingEl.style.display = "block";
+      loadingEl.textContent = "Loading brain model...";
+    }
+  }
   function hideLoading() {
     const loadingEl = document.querySelector(".loading");
     if (loadingEl) {
@@ -38128,8 +38175,85 @@ fn main(
       loadingEl.style.color = "#ff6b6b";
     }
   }
+  function initializeGeometrySelector(onGeometryChange) {
+    const geometrySelect = document.getElementById("geometry-select");
+    if (!geometrySelect) {
+      console.warn("Geometry selector not found");
+      return;
+    }
+    geometrySelect.addEventListener("change", (e) => {
+      const newGeometry = e.target.value;
+      console.log("Geometry changed to:", newGeometry);
+      if (onGeometryChange) {
+        onGeometryChange(newGeometry);
+      }
+    });
+  }
 
   // src/main.js
+  async function loadBrainGeometry(geometry) {
+    const renderer = getRenderer();
+    if (!renderer) {
+      console.error("Renderer not initialized");
+      return;
+    }
+    console.log(`Loading ${geometry} surfaces...`);
+    const lhConfig = getHemisphereConfig("lh");
+    await loadHemisphere(
+      `data/json/lh_${geometry}.json`,
+      "lh",
+      lhConfig.offsetX,
+      lhConfig.offsetZ,
+      lhConfig.rotateZ,
+      renderer
+    );
+    const rhConfig = getHemisphereConfig("rh");
+    await loadHemisphere(
+      `data/json/rh_${geometry}.json`,
+      "rh",
+      rhConfig.offsetX,
+      rhConfig.offsetZ,
+      rhConfig.rotateZ,
+      renderer
+    );
+    console.log(`${geometry} surfaces loaded successfully`);
+  }
+  async function handleGeometryChange(newGeometry) {
+    try {
+      showLoading();
+      const loadingEl = document.querySelector(".loading");
+      if (loadingEl) {
+        loadingEl.textContent = `Loading ${newGeometry} geometry...`;
+      }
+      const selectedLabel = getCurrentSelectedLabel();
+      setCurrentGeometry(newGeometry);
+      const renderer = getRenderer();
+      const lhConfig = getHemisphereConfig("lh");
+      const rhConfig = getHemisphereConfig("rh");
+      if (lhConfig.actor) {
+        renderer.removeActor(lhConfig.actor);
+      }
+      if (rhConfig.actor) {
+        renderer.removeActor(rhConfig.actor);
+      }
+      await loadBrainGeometry(newGeometry);
+      if (selectedLabel) {
+        highlightLabel(selectedLabel);
+        document.querySelectorAll(".label-list li").forEach((el) => {
+          if (el.dataset.labelName === selectedLabel) {
+            el.classList.add("active");
+          }
+        });
+      } else {
+        resetToDefaultColoring();
+        resetCamera();
+      }
+      hideLoading();
+    } catch (error) {
+      console.error("Error loading geometry:", error);
+      showError(`Error loading ${newGeometry} geometry. File may not exist.`);
+    }
+  }
   async function initializeApp() {
     try {
       const fullScreenRenderer = vtkFullScreenRenderWindow$1.newInstance({
@@ -38152,26 +38276,9 @@ fn main(
       populateLabelList(labelsData);
       initializeHelpModal();
       initializeNameToggle();
-      console.log("Loading left hemisphere...");
-      const lhConfig = getHemisphereConfig("lh");
-      await loadHemisphere(
-        "data/json/lh_inflated.json",
-        "lh",
-        lhConfig.offsetX,
-        lhConfig.offsetZ,
-        lhConfig.rotateZ,
-        renderer
-      );
-      console.log("Loading right hemisphere...");
-      const rhConfig = getHemisphereConfig("rh");
-      await loadHemisphere(
-        "data/json/rh_inflated.json",
-        "rh",
-        rhConfig.offsetX,
-        rhConfig.offsetZ,
-        rhConfig.rotateZ,
-        renderer
-      );
+      initializeGeometrySelector(handleGeometryChange);
+      const initialGeometry = getCurrentGeometry();
+      await loadBrainGeometry(initialGeometry);
       console.log("Brain model loaded successfully!");
       hideLoading();
       resetCamera();

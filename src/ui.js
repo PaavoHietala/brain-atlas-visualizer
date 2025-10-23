@@ -154,3 +154,25 @@ export function showError(message) {
     loadingEl.style.color = '#ff6b6b';
   }
 }
+
+/**
+ * Initialize geometry selector dropdown
+ * @param {Function} onGeometryChange - Callback function when geometry changes
+ */
+export function initializeGeometrySelector(onGeometryChange) {
+  const geometrySelect = document.getElementById('geometry-select');
+  
+  if (!geometrySelect) {
+    console.warn('Geometry selector not found');
+    return;
+  }
+  
+  geometrySelect.addEventListener('change', (e) => {
+    const newGeometry = e.target.value;
+    console.log('Geometry changed to:', newGeometry);
+    
+    if (onGeometryChange) {
+      onGeometryChange(newGeometry);
+    }
+  });
+}

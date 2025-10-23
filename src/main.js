@@ -14,7 +14,11 @@ import {
     setRenderer,
     setLabelsData,
     setLabelNamesData,
-    getHemisphereConfig
+    getHemisphereConfig,
+    setCurrentGeometry,
+    getCurrentGeometry,
+    getRenderer,
+    getCurrentSelectedLabel
 } from './state.js';
 import { loadHemisphere, loadLabels, loadLabelNames } from './loader.js';
 import { createOrientationWidget } from './orientation.js';
@@ -23,9 +27,106 @@ import {
   populateLabelList, 
   initializeHelpModal, 
   initializeNameToggle,
+  initializeGeometrySelector,
   hideLoading,
-  showError 
+  showError,
+  showLoading
 } from './ui.js';
+import { resetToDefaultColoring, highlightLabel } from './labels.js';
+
+/**
+ * Load both hemispheres with the specified geometry
+ * @param {string} geometry - Geometry type (inflated, original, pial, white)
+ */
+async function loadBrainGeometry(geometry) {
+  const renderer = getRenderer();
+  if (!renderer) {
+    console.error('Renderer not initialized');
+    return;
+  }
+  
+  console.log(`Loading ${geometry} surfaces...`);
+  
+  // Load both hemispheres
+  const lhConfig = getHemisphereConfig('lh');
+  await loadHemisphere(
+    `data/json/lh_${geometry}.json`, 
+    'lh', 
+    lhConfig.offsetX,
+    lhConfig.offsetZ,
+    lhConfig.rotateZ, 
+    renderer
+  );
+  
+  const rhConfig = getHemisphereConfig('rh');
+  await loadHemisphere(
+    `data/json/rh_${geometry}.json`, 
+    'rh', 
+    rhConfig.offsetX,
+    rhConfig.offsetZ,
+    rhConfig.rotateZ,
+    renderer
+  );
+  
+  console.log(`${geometry} surfaces loaded successfully`);
+}
+
+/**
+ * Handle geometry change
+ * @param {string} newGeometry - New geometry type
+ */
+async function handleGeometryChange(newGeometry) {
+  try {
+    showLoading();
+    const loadingEl = document.querySelector('.loading');
+    if (loadingEl) {
+      loadingEl.textContent = `Loading ${newGeometry} geometry...`;
+    }
+    
+    // Remember currently selected label (if any)
+    const selectedLabel = getCurrentSelectedLabel();
+    
+    // Update state
+    setCurrentGeometry(newGeometry);
+    
+    // Remove old actors from renderer
+    const renderer = getRenderer();
+    const lhConfig = getHemisphereConfig('lh');
+    const rhConfig = getHemisphereConfig('rh');
+    
+    if (lhConfig.actor) {
+      renderer.removeActor(lhConfig.actor);
+    }
+    if (rhConfig.actor) {
+      renderer.removeActor(rhConfig.actor);
+    }
+    
+    // Load new geometry
+    await loadBrainGeometry(newGeometry);
+    
+    // Re-apply label highlighting if there was a selected label
+    if (selectedLabel) {
+      highlightLabel(selectedLabel);
+      // Keep the label marked as active in the UI
+      document.querySelectorAll('.label-list li').forEach(el => {
+        if (el.dataset.labelName === selectedLabel) {
+          el.classList.add('active');
+        }
+      });
+    } else {
+      // Reset to default coloring (no label was selected)
+      resetToDefaultColoring();
+      // Reset camera only if no label was selected
+      resetCamera();
+    }
+    
+    hideLoading();
+    
+  } catch (error) {
+    console.error('Error loading geometry:', error);
+    showError(`Error loading ${newGeometry} geometry. File may not exist.`);
+  }
+}
 
 /**
  * Initialize the brain atlas visualizer application
@@ -66,29 +167,11 @@ async function initializeApp() {
     // Initialize UI components
     initializeHelpModal();
     initializeNameToggle();
+    initializeGeometrySelector(handleGeometryChange);
     
-    // Load both hemispheres
-    console.log('Loading left hemisphere...');
-    const lhConfig = getHemisphereConfig('lh');
-    await loadHemisphere(
-      'data/json/lh_inflated.json', 
-      'lh', 
-      lhConfig.offsetX,
-      lhConfig.offsetZ,
-      lhConfig.rotateZ, 
-      renderer
-    );
-    
-    console.log('Loading right hemisphere...');
-    const rhConfig = getHemisphereConfig('rh');
-    await loadHemisphere(
-      'data/json/rh_inflated.json', 
-      'rh', 
-      rhConfig.offsetX,
-      rhConfig.offsetZ,
-      rhConfig.rotateZ,
-      renderer
-    );
+    // Load initial geometry (inflated by default)
+    const initialGeometry = getCurrentGeometry();
+    await loadBrainGeometry(initialGeometry);
     
     console.log('Brain model loaded successfully!');
     

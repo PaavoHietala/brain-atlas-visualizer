@@ -75,6 +75,54 @@ body {
   border-color: #5a9ff5;
 }
 
+/* Geometry Selector */
+.geometry-selector {
+  margin: 1rem 0;
+  padding: 1rem;
+  background: #333;
+  border-radius: 8px;
+  border: 1px solid #444;
+}
+
+.geometry-selector label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+  color: #aaa;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.geometry-selector select {
+  width: 100%;
+  background: #2c2c2c;
+  border: 1px solid #555;
+  color: #e0e0e0;
+  padding: 0.6rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.geometry-selector select:hover {
+  border-color: #666;
+  background: #333;
+}
+
+.geometry-selector select:focus {
+  outline: none;
+  border-color: #4a90e2;
+  box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
+}
+
+.geometry-selector select option {
+  background: #2c2c2c;
+  color: #e0e0e0;
+  padding: 0.5rem;
+}
+
 /* Label columns container */
 #labels-container {
   display: grid;

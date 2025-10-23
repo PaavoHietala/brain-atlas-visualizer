@@ -27,7 +27,8 @@ export const state = {
   currentSelectedLabel: null,
   renderWindow: null,
   renderer: null,
-  usePlainEnglishNames: false
+  usePlainEnglishNames: false,
+  currentGeometry: 'inflated'  // Current geometry type
 };
 
 /**
@@ -121,4 +122,18 @@ export function togglePlainEnglishNames() {
  */
 export function isPlainEnglishNamesEnabled() {
   return state.usePlainEnglishNames;
+}
+
+/**
+ * Set current geometry type
+ */
+export function setCurrentGeometry(geometry) {
+  state.currentGeometry = geometry;
+}
+
+/**
+ * Get current geometry type
+ */
+export function getCurrentGeometry() {
+  return state.currentGeometry;
 }

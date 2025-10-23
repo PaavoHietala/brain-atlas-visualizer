@@ -92,6 +92,9 @@ export function computeLabelCenterAndNormal(meshData, vertices, offsetX, offsetZ
   let centerX = 0, centerY = 0, centerZ = 0;
   let normalX = 0, normalY = 0, normalZ = 0;
   
+  // Create a set of label vertices for fast lookup
+  const labelVertexSet = new Set(vertices);
+  
   // Compute center of mass with rotation applied
   vertices.forEach(idx => {
     const x = meshData.vertices[idx][0];
@@ -109,11 +112,6 @@ export function computeLabelCenterAndNormal(meshData, vertices, offsetX, offsetZ
     centerX += finalX;
     centerY += finalY;
     centerZ += finalZ;
-    
-    // Use vertex position as approximation of normal (pointing outward from origin)
-    normalX += rotatedX;
-    normalY += rotatedY;
-    normalZ += z;
   });
   
   const count = vertices.length;
@@ -121,12 +119,63 @@ export function computeLabelCenterAndNormal(meshData, vertices, offsetX, offsetZ
   centerY /= count;
   centerZ /= count;
   
+  // Compute average surface normal from triangles that belong to the label
+  let triangleCount = 0;
+  
+  meshData.triangles.forEach(triangle => {
+    // Check if all vertices of the triangle are in the label
+    const v0_in = labelVertexSet.has(triangle[0]);
+    const v1_in = labelVertexSet.has(triangle[1]);
+    const v2_in = labelVertexSet.has(triangle[2]);
+    
+    // Include triangle if at least 2 vertices are in the label
+    if ((v0_in && v1_in) || (v1_in && v2_in) || (v0_in && v2_in)) {
+      // Get the three vertices
+      const v0 = meshData.vertices[triangle[0]];
+      const v1 = meshData.vertices[triangle[1]];
+      const v2 = meshData.vertices[triangle[2]];
+      
+      // Compute edge vectors
+      const edge1 = [v1[0] - v0[0], v1[1] - v0[1], v1[2] - v0[2]];
+      const edge2 = [v2[0] - v0[0], v2[1] - v0[1], v2[2] - v0[2]];
+      
+      // Compute cross product (triangle normal)
+      const nx = edge1[1] * edge2[2] - edge1[2] * edge2[1];
+      const ny = edge1[2] * edge2[0] - edge1[0] * edge2[2];
+      const nz = edge1[0] * edge2[1] - edge1[1] * edge2[0];
+      
+      // Apply rotation to the normal (same rotation as vertices)
+      const rotatedNx = nx * cosAngle - ny * sinAngle;
+      const rotatedNy = nx * sinAngle + ny * cosAngle;
+      
+      // Accumulate normals
+      normalX += rotatedNx;
+      normalY += rotatedNy;
+      normalZ += nz;
+      
+      triangleCount++;
+    }
+  });
+  
   // Normalize the average normal
-  const normalLength = Math.sqrt(normalX * normalX + normalY * normalY + normalZ * normalZ);
-  if (normalLength > 0) {
-    normalX /= normalLength;
-    normalY /= normalLength;
-    normalZ /= normalLength;
+  if (triangleCount > 0) {
+    const normalLength = Math.sqrt(normalX * normalX + normalY * normalY + normalZ * normalZ);
+    if (normalLength > 0) {
+      normalX /= normalLength;
+      normalY /= normalLength;
+      normalZ /= normalLength;
+    }
+  } else {
+    // Fallback: use vertex positions as approximation
+    normalX = centerX - offsetX;
+    normalY = centerY;
+    normalZ = centerZ - offsetZ;
+    const normalLength = Math.sqrt(normalX * normalX + normalY * normalY + normalZ * normalZ);
+    if (normalLength > 0) {
+      normalX /= normalLength;
+      normalY /= normalLength;
+      normalZ /= normalLength;
+    }
   }
   
   return {
