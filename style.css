@@ -13,6 +13,21 @@ body {
   background: #1a1a1a;
 }
 
+/* Link styles */
+a {
+  color: #5a9ff5;
+  text-decoration: none;
+}
+
+a:hover {
+  color: #7bb3ff;
+  text-decoration: underline;
+}
+
+a:visited {
+  color: #87CEEB; /* Light blue */
+}
+
 /* Sidebar styles */
 #sidebar {
   width: 500px;

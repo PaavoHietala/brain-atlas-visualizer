@@ -10,15 +10,18 @@
   <div id="sidebar">
     <div class="sidebar-header">
       <h2>Brain Atlas Viewer</h2>
+      <div class="button-group">
+        <button id="help-btn" class="icon-btn" title="View Instructions">ℹ️</button>
+      </div>
     </div>
     
     <!-- Geometry Selector -->
     <div class="geometry-selector">
       <label for="geometry-select">Surface Geometry:</label>
       <select id="geometry-select">
-        <option value="inflated" selected>Inflated (Default)</option>
+        <option value="pial" selected>Pial (Outer) - Default</option>
+        <option value="inflated">Inflated</option>
         <option value="original">Original</option>
-        <option value="pial">Pial (Outer)</option>
         <option value="white">White Matter</option>
       </select>
     </div>
@@ -26,7 +29,6 @@
     <div class="sidebar-header">
       <h2>Atlas Labels</h2>
       <div class="button-group">
-        <button id="help-btn" class="icon-btn" title="View Instructions">ℹ️</button>
         <button id="toggle-names-btn" class="icon-btn" title="Toggle Label Names">Aa</button>
       </div>
     </div>
@@ -78,6 +80,12 @@
         <ul>
           <li><strong>Surface Geometry:</strong> Switch between different brain surface representations (Inflated, Original, Pial, White Matter)</li>
           <li><strong>Aa button:</strong> Toggle between technical FreeSurfer names and plain English descriptions</li>
+        </ul>
+
+        <h3>❗️ Notice</h3>
+        <ul>
+          <li><strong>Much of the code has been vibed using Copilot and Claude Sonnet 4.5. Use at your own risk and double-check the results from the original sources.</strong></li>
+          <li>Feel free to report any issues or suggest improvements on the project's <a href="https://github.com/PaavoHietala/brain-atlas-visualizer">GitHub Repository</a>.</li>
         </ul>
       </div>
     </div>

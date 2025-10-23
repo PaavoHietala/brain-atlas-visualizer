@@ -36953,11 +36953,320 @@ fn main(
     mapper.setScalarVisibility(true);
     mapper.setScalarRange(-1, 10);
   }
+  var opacityAnimations = /* @__PURE__ */ new Map();
+  function animateOpacity(actor, targetOpacity, duration = 500, onComplete = null, renderCallback = null) {
+    if (!actor) return;
+    const property = actor.getProperty();
+    const startOpacity = property.getOpacity();
+    if (Math.abs(startOpacity - targetOpacity) < 1e-3) {
+      if (onComplete) onComplete();
+      return;
+    }
+    const existingAnimation = opacityAnimations.get(actor);
+    if (existingAnimation) {
+      cancelAnimationFrame(existingAnimation.frameId);
+    }
+    const startTime = Date.now();
+    function animate() {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = progress < 0.5 ? 2 * progress * progress : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+      const currentOpacity = startOpacity + (targetOpacity - startOpacity) * eased;
+      property.setOpacity(currentOpacity);
+      if (renderCallback) {
+        renderCallback();
+      }
+      if (progress < 1) {
+        const frameId2 = requestAnimationFrame(animate);
+        opacityAnimations.set(actor, { frameId: frameId2, startTime });
+      } else {
+        opacityAnimations.delete(actor);
+        if (onComplete) onComplete();
+      }
+    }
+    const frameId = requestAnimationFrame(animate);
+    opacityAnimations.set(actor, { frameId, startTime });
+  }
+  function checkHemisphereOcclusion(cameraPos, targetConfig, oppositeConfig, meshData, labelVertices, offsetX, offsetZ, rotateZ4) {
+    if (!oppositeConfig.meshData || !targetConfig.meshData) return false;
+    const oppAngleRad = oppositeConfig.rotateZ * Math.PI / 180;
+    const oppCosAngle = Math.cos(oppAngleRad);
+    const oppSinAngle = Math.sin(oppAngleRad);
+    const oppMeshData = oppositeConfig.meshData;
+    const oppOffsetX = oppositeConfig.offsetX;
+    const oppOffsetZ = oppositeConfig.offsetZ || 0;
+    let minOppX = Infinity, maxOppX = -Infinity;
+    let minOppY = Infinity, maxOppY = -Infinity;
+    let minOppZ = Infinity, maxOppZ = -Infinity;
+    const oppSampleSize = Math.min(100, oppMeshData.vertices.length);
+    const oppStep = Math.max(1, Math.floor(oppMeshData.vertices.length / oppSampleSize));
+    for (let i = 0; i < oppMeshData.vertices.length; i += oppStep) {
+      const v = oppMeshData.vertices[i];
+      const x = v[0];
+      const y = v[1];
+      const z = v[2];
+      const rotX = x * oppCosAngle - y * oppSinAngle;
+      const rotY = x * oppSinAngle + y * oppCosAngle;
+      const worldX = rotX + oppOffsetX;
+      const worldY = rotY;
+      const worldZ = z + oppOffsetZ;
+      minOppX = Math.min(minOppX, worldX);
+      maxOppX = Math.max(maxOppX, worldX);
+      minOppY = Math.min(minOppY, worldY);
+      maxOppY = Math.max(maxOppY, worldY);
+      minOppZ = Math.min(minOppZ, worldZ);
+      maxOppZ = Math.max(maxOppZ, worldZ);
+    }
+    const oppCenterX = (minOppX + maxOppX) / 2;
+    const oppCenterY = (minOppY + maxOppY) / 2;
+    const oppCenterZ = (minOppZ + maxOppZ) / 2;
+    const distToOpposite = Math.sqrt(
+      Math.pow(oppCenterX - cameraPos[0], 2) + Math.pow(oppCenterY - cameraPos[1], 2) + Math.pow(oppCenterZ - cameraPos[2], 2)
+    );
+    const distToTarget = Math.sqrt(
+      Math.pow(offsetX - cameraPos[0], 2) + Math.pow(0 - cameraPos[1], 2) + Math.pow(offsetZ - cameraPos[2], 2)
+    );
+    if (distToOpposite > distToTarget * 1.3) {
+      return false;
+    }
+    const targetAngleRad = rotateZ4 * Math.PI / 180;
+    const targetCosAngle = Math.cos(targetAngleRad);
+    const targetSinAngle = Math.sin(targetAngleRad);
+    const sampleSize = Math.min(50, Math.max(10, Math.floor(labelVertices.length / 10)));
+    const step = Math.max(1, Math.floor(labelVertices.length / sampleSize));
+    let occludedCount = 0;
+    const threshold = Math.max(2, Math.floor(sampleSize * 0.1));
+    const expansion = 15;
+    const boxMinX = minOppX - expansion;
+    const boxMaxX = maxOppX + expansion;
+    const boxMinY = minOppY - expansion;
+    const boxMaxY = maxOppY + expansion;
+    const boxMinZ = minOppZ - expansion;
+    const boxMaxZ = maxOppZ + expansion;
+    for (let i = 0; i < labelVertices.length; i += step) {
+      const vertexIdx = labelVertices[i];
+      const vertex = meshData.vertices[vertexIdx];
+      const x = vertex[0];
+      const y = vertex[1];
+      const z = vertex[2];
+      const rotatedX = x * targetCosAngle - y * targetSinAngle;
+      const rotatedY = x * targetSinAngle + y * targetCosAngle;
+      const vertexWorldX = rotatedX + offsetX;
+      const vertexWorldY = rotatedY;
+      const vertexWorldZ = z + offsetZ;
+      const dirX = vertexWorldX - cameraPos[0];
+      const dirY = vertexWorldY - cameraPos[1];
+      const dirZ = vertexWorldZ - cameraPos[2];
+      const distanceToVertex = Math.sqrt(dirX * dirX + dirY * dirY + dirZ * dirZ);
+      if (distanceToVertex < 1) continue;
+      const ndirX = dirX / distanceToVertex;
+      const ndirY = dirY / distanceToVertex;
+      const ndirZ = dirZ / distanceToVertex;
+      let tMin = 0;
+      let tMax = distanceToVertex * 0.98;
+      let intersects2 = true;
+      if (Math.abs(ndirX) > 1e-4) {
+        const t1 = (boxMinX - cameraPos[0]) / ndirX;
+        const t2 = (boxMaxX - cameraPos[0]) / ndirX;
+        tMin = Math.max(tMin, Math.min(t1, t2));
+        tMax = Math.min(tMax, Math.max(t1, t2));
+      } else if (cameraPos[0] < boxMinX || cameraPos[0] > boxMaxX) {
+        intersects2 = false;
+      }
+      if (intersects2 && Math.abs(ndirY) > 1e-4) {
+        const t1 = (boxMinY - cameraPos[1]) / ndirY;
+        const t2 = (boxMaxY - cameraPos[1]) / ndirY;
+        tMin = Math.max(tMin, Math.min(t1, t2));
+        tMax = Math.min(tMax, Math.max(t1, t2));
+      } else if (intersects2 && (cameraPos[1] < boxMinY || cameraPos[1] > boxMaxY)) {
+        intersects2 = false;
+      }
+      if (intersects2 && Math.abs(ndirZ) > 1e-4) {
+        const t1 = (boxMinZ - cameraPos[2]) / ndirZ;
+        const t2 = (boxMaxZ - cameraPos[2]) / ndirZ;
+        tMin = Math.max(tMin, Math.min(t1, t2));
+        tMax = Math.min(tMax, Math.max(t1, t2));
+      } else if (intersects2 && (cameraPos[2] < boxMinZ || cameraPos[2] > boxMaxZ)) {
+        intersects2 = false;
+      }
+      if (intersects2 && tMin <= tMax && tMin > 0 && tMin < distanceToVertex * 0.98) {
+        occludedCount++;
+        if (occludedCount >= threshold) {
+          return true;
+        }
+      }
+    }
+    return occludedCount >= threshold;
+  }
+  function adjustHemisphereOpacitySmooth(targetHemi, meshData, labelVertices, offsetX, offsetZ, rotateZ4, getHemisphereConfig2, renderer, renderCallback) {
+    if (!renderer) return;
+    const camera = renderer.getActiveCamera();
+    const cameraPos = camera.getPosition();
+    const oppositeHemi = targetHemi === "lh" ? "rh" : "lh";
+    const oppositeConfig = getHemisphereConfig2(oppositeHemi);
+    const targetConfig = getHemisphereConfig2(targetHemi);
+    const isOccluding = checkHemisphereOcclusion(
+      cameraPos,
+      targetConfig,
+      oppositeConfig,
+      meshData,
+      labelVertices,
+      offsetX,
+      offsetZ,
+      rotateZ4
+    );
+    ["lh", "rh"].forEach((hemi) => {
+      const config = getHemisphereConfig2(hemi);
+      if (!config.actor) return;
+      const targetOpacity = hemi === targetHemi ? 1 : isOccluding ? 0.2 : 1;
+      animateOpacity(config.actor, targetOpacity, 500, null, renderCallback);
+    });
+  }
+  function resetHemisphereOpacitySmooth(hemispheres, getHemisphereConfig2, renderCallback) {
+    hemispheres.forEach((hemi) => {
+      const config = getHemisphereConfig2(hemi);
+      if (!config.actor) return;
+      animateOpacity(config.actor, 1, 500, null, renderCallback);
+    });
+  }
+  function setupCameraInteractionListener(getRenderWindow2, getRenderer2, getCurrentSelectedLabel2, getLabelsData2, getHemisphereConfig2) {
+    const renderWindow = getRenderWindow2();
+    const renderer = getRenderer2();
+    if (!renderWindow || !renderer) return;
+    const interactor = renderWindow.getInteractor();
+    if (!interactor) return;
+    if (interactor._occlusionListenerActive) {
+      return;
+    }
+    interactor._occlusionListenerActive = true;
+    interactor.onAnimation(() => {
+      const currentLabel = getCurrentSelectedLabel2();
+      if (!currentLabel) return;
+      const labelsData = getLabelsData2();
+      if (!labelsData || !labelsData[currentLabel]) return;
+      const label = labelsData[currentLabel];
+      const targetHemi = label.hemi;
+      const vertices = label.vertices;
+      const targetConfig = getHemisphereConfig2(targetHemi);
+      if (!targetConfig.meshData) return;
+      adjustHemisphereOpacitySmooth(
+        targetHemi,
+        targetConfig.meshData,
+        vertices,
+        targetConfig.offsetX,
+        targetConfig.offsetZ,
+        targetConfig.rotateZ,
+        getHemisphereConfig2,
+        renderer,
+        () => renderWindow.render()
+      );
+    });
+  }
+
+  // src/freesurfer.js
+  function parseFreeSurferSurface(buffer) {
+    const dataView = new DataView(buffer);
+    let offset = 0;
+    const magic1 = dataView.getUint8(offset++);
+    const magic2 = dataView.getUint8(offset++);
+    const magic3 = dataView.getUint8(offset++);
+    if (magic1 !== 255 || magic2 !== 255 || magic3 !== 254) {
+      throw new Error(`Invalid FreeSurfer surface file magic number: ${magic1}, ${magic2}, ${magic3}`);
+    }
+    let comment = "";
+    while (offset < buffer.byteLength) {
+      const char = dataView.getUint8(offset++);
+      if (char === 10) {
+        const nextChar = dataView.getUint8(offset);
+        if (nextChar === 10) {
+          offset++;
+          break;
+        }
+      }
+      comment += String.fromCharCode(char);
+    }
+    const numVertices = dataView.getInt32(offset, false);
+    offset += 4;
+    const numFaces = dataView.getInt32(offset, false);
+    offset += 4;
+    console.log(`FreeSurfer surface: ${numVertices} vertices, ${numFaces} faces`);
+    const vertices = [];
+    for (let i = 0; i < numVertices; i++) {
+      const x = dataView.getFloat32(offset, false);
+      offset += 4;
+      const y = dataView.getFloat32(offset, false);
+      offset += 4;
+      const z = dataView.getFloat32(offset, false);
+      offset += 4;
+      vertices.push([x, y, z]);
+    }
+    const triangles = [];
+    for (let i = 0; i < numFaces; i++) {
+      const v0 = dataView.getInt32(offset, false);
+      offset += 4;
+      const v1 = dataView.getInt32(offset, false);
+      offset += 4;
+      const v2 = dataView.getInt32(offset, false);
+      offset += 4;
+      triangles.push([v0, v1, v2]);
+    }
+    return {
+      vertices,
+      triangles,
+      numVertices,
+      numFaces,
+      comment
+    };
+  }
+  function parseFreeSurferCurvature(buffer) {
+    const dataView = new DataView(buffer);
+    let offset = 0;
+    const magic1 = dataView.getUint8(offset++);
+    const magic2 = dataView.getUint8(offset++);
+    const magic3 = dataView.getUint8(offset++);
+    if (magic1 !== 255 || magic2 !== 255 || magic3 !== 255) {
+      throw new Error(`Invalid FreeSurfer curvature file magic number: ${magic1}, ${magic2}, ${magic3}`);
+    }
+    const numVertices = dataView.getInt32(offset, false);
+    offset += 4;
+    const numFaces = dataView.getInt32(offset, false);
+    offset += 4;
+    const valuesPerVertex = dataView.getInt32(offset, false);
+    offset += 4;
+    console.log(`FreeSurfer curvature: ${numVertices} vertices, ${valuesPerVertex} values per vertex`);
+    const curvature = new Float32Array(numVertices);
+    for (let i = 0; i < numVertices; i++) {
+      curvature[i] = dataView.getFloat32(offset, false);
+      offset += 4;
+    }
+    return curvature;
+  }
+  async function loadFreeSurferSurface(url) {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Failed to load surface: ${url}`);
+    }
+    const buffer = await response.arrayBuffer();
+    return parseFreeSurferSurface(buffer);
+  }
+  async function loadFreeSurferCurvature(url) {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Failed to load curvature: ${url}`);
+    }
+    const buffer = await response.arrayBuffer();
+    return parseFreeSurferCurvature(buffer);
+  }
 
   // src/loader.js
-  async function loadHemisphere(url, hemi, offsetX, offsetZ, rotateZ4, renderer) {
-    const response = await fetch(url);
-    const meshData = await response.json();
+  async function loadHemisphere(surfaceUrl, curvatureUrl, hemi, offsetX, offsetZ, rotateZ4, renderer) {
+    const surface = await loadFreeSurferSurface(surfaceUrl);
+    const curvature = await loadFreeSurferCurvature(curvatureUrl);
+    const meshData = {
+      vertices: surface.vertices,
+      triangles: surface.triangles,
+      curvature: Array.from(curvature)
+    };
     const polyData = createPolyDataFromMesh(meshData, offsetX, offsetZ, rotateZ4);
     const mapper = vtkMapper$1.newInstance();
     mapper.setInputData(polyData);
@@ -37952,7 +38261,7 @@ fn main(
   }
 
   // src/camera.js
-  function positionCameraForLabel(center, normal, distance3 = 800) {
+  function positionCameraForLabel(center, normal, distance3 = 800, onComplete = null) {
     const renderer = getRenderer();
     if (!renderer) return;
     const camera = renderer.getActiveCamera();
@@ -37989,6 +38298,8 @@ fn main(
       }
       if (t < 1) {
         requestAnimationFrame(animate);
+      } else if (onComplete) {
+        onComplete();
       }
     }
     animate();
@@ -38094,9 +38405,37 @@ fn main(
       targetConfig.offsetZ,
       targetConfig.rotateZ
     );
-    positionCameraForLabel(center, normal);
+    const renderWindow = getRenderWindow();
+    if (renderWindow) {
+      renderWindow.render();
+    }
+    positionCameraForLabel(center, normal, 800, () => {
+      setupCameraInteractionListener(
+        getRenderWindow,
+        getRenderer,
+        getCurrentSelectedLabel,
+        getLabelsData,
+        getHemisphereConfig
+      );
+      const renderer = getRenderer();
+      const renderWindow2 = getRenderWindow();
+      if (renderer && renderWindow2) {
+        adjustHemisphereOpacitySmooth(
+          targetHemi,
+          targetConfig.meshData,
+          vertices,
+          targetConfig.offsetX,
+          targetConfig.offsetZ,
+          targetConfig.rotateZ,
+          getHemisphereConfig,
+          renderer,
+          () => renderWindow2.render()
+        );
+      }
+    });
   }
   function resetToDefaultColoring() {
+    const renderWindow = getRenderWindow();
     ["lh", "rh"].forEach((hemi) => {
       const config = getHemisphereConfig(hemi);
       if (!config.meshData) return;
@@ -38112,7 +38451,11 @@ fn main(
       applyCurvatureColoring(mapper, meshData);
       config.polyData = polyData;
     });
-    const renderWindow = getRenderWindow();
+    resetHemisphereOpacitySmooth(["lh", "rh"], getHemisphereConfig, () => {
+      if (renderWindow) {
+        renderWindow.render();
+      }
+    });
     if (renderWindow) {
       renderWindow.render();
     }
@@ -38248,10 +38591,20 @@ fn main(
       console.error("Renderer not initialized");
       return;
     }
-    console.log(`Loading ${geometry} surfaces...`);
+    console.log(`Loading ${geometry} surfaces from FreeSurfer binary files...`);
+    const geometryFileMap = {
+      "inflated": "inflated",
+      "original": "orig",
+      "pial": "pial",
+      "white": "white"
+    };
+    const fsGeometry = geometryFileMap[geometry] || geometry;
     const lhConfig = getHemisphereConfig("lh");
     await loadHemisphere(
-      `data/json/lh_${geometry}.json`,
+      `data/fsaverage/surf/lh.${fsGeometry}`,
+      // Surface file
+      `data/fsaverage/surf/lh.curv`,
+      // Curvature file
       "lh",
       lhConfig.offsetX,
       lhConfig.offsetZ,
@@ -38260,14 +38613,17 @@ fn main(
     );
     const rhConfig = getHemisphereConfig("rh");
     await loadHemisphere(
-      `data/json/rh_${geometry}.json`,
+      `data/fsaverage/surf/rh.${fsGeometry}`,
+      // Surface file
+      `data/fsaverage/surf/rh.curv`,
+      // Curvature file
       "rh",
       rhConfig.offsetX,
       rhConfig.offsetZ,
       rhConfig.rotateZ,
       renderer
     );
-    console.log(`${geometry} surfaces loaded successfully`);
+    console.log(`${geometry} surfaces loaded successfully from FreeSurfer files`);
   }
   async function handleGeometryChange(newGeometry) {
     try {

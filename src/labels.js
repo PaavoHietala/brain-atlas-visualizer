@@ -3,13 +3,20 @@
 
 import vtkDataArray from '@kitware/vtk.js/Common/Core/DataArray';
 import { createPolyDataFromMesh, computeLabelCenterAndNormal } from './geometry.js';
-import { applyCurvatureColoring, applyLabelHighlightColoring } from './rendering.js';
+import { 
+  applyCurvatureColoring, 
+  applyLabelHighlightColoring,
+  adjustHemisphereOpacitySmooth,
+  resetHemisphereOpacitySmooth,
+  setupCameraInteractionListener
+} from './rendering.js';
 import { positionCameraForLabel } from './camera.js';
 import { 
   state, 
   getLabelsData, 
   getHemisphereConfig, 
   getRenderWindow,
+  getRenderer,
   setCurrentSelectedLabel,
   getCurrentSelectedLabel
 } from './state.js';
@@ -103,13 +110,50 @@ export function highlightLabel(labelName) {
     targetConfig.offsetZ,
     targetConfig.rotateZ
   );
-  positionCameraForLabel(center, normal);
+  
+  // Trigger a render to show the label highlighting
+  const renderWindow = getRenderWindow();
+  if (renderWindow) {
+    renderWindow.render();
+  }
+  
+  // Position camera and adjust opacity after animation completes
+  positionCameraForLabel(center, normal, 800, () => {
+    // Setup camera interaction listener AFTER camera has moved
+    // This ensures the camera animation completes first
+    setupCameraInteractionListener(
+      getRenderWindow,
+      getRenderer,
+      getCurrentSelectedLabel,
+      getLabelsData,
+      getHemisphereConfig
+    );
+    
+    // After camera is in position, do an initial opacity check
+    const renderer = getRenderer();
+    const renderWindow = getRenderWindow();
+    if (renderer && renderWindow) {
+      adjustHemisphereOpacitySmooth(
+        targetHemi,
+        targetConfig.meshData,
+        vertices,
+        targetConfig.offsetX,
+        targetConfig.offsetZ,
+        targetConfig.rotateZ,
+        getHemisphereConfig,
+        renderer,
+        () => renderWindow.render()
+      );
+    }
+  });
 }
 
 /**
  * Reset all hemispheres to default curvature coloring
  */
 export function resetToDefaultColoring() {
+  const renderWindow = getRenderWindow();
+  
   ['lh', 'rh'].forEach(hemi => {
     const config = getHemisphereConfig(hemi);
     if (!config.meshData) return;
@@ -129,8 +173,14 @@ export function resetToDefaultColoring() {
     config.polyData = polyData;
   });
   
-  // Just re-render, don't move the camera
-  const renderWindow = getRenderWindow();
+  // Reset opacity to full with smooth fade
+  resetHemisphereOpacitySmooth(['lh', 'rh'], getHemisphereConfig, () => {
+    if (renderWindow) {
+      renderWindow.render();
+    }
+  });
+  
+  // Trigger initial render
   if (renderWindow) {
     renderWindow.render();
   }

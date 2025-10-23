@@ -6,10 +6,12 @@ import vtkMapper from '@kitware/vtk.js/Rendering/Core/Mapper';
 import { createPolyDataFromMesh } from './geometry.js';
 import { applyCurvatureColoring } from './rendering.js';
 import { updateHemisphereData } from './state.js';
+import { loadFreeSurferSurface, loadFreeSurferCurvature } from './freesurfer.js';
 
 /**
- * Load hemisphere mesh data from JSON file and add to renderer
- * @param {string} url - URL to JSON file
+ * Load hemisphere mesh data from FreeSurfer binary files and add to renderer
+ * @param {string} surfaceUrl - URL to FreeSurfer surface file
+ * @param {string} curvatureUrl - URL to FreeSurfer curvature file
  * @param {string} hemi - Hemisphere identifier ('lh' or 'rh')
  * @param {number} offsetX - X-axis offset
  * @param {number} offsetZ - Z-axis offset
@@ -17,9 +19,17 @@ import { updateHemisphereData } from './state.js';
  * @param {vtkRenderer} renderer - VTK renderer
  * @returns {Promise<vtkActor>} Actor for the loaded hemisphere
  */
-export async function loadHemisphere(url, hemi, offsetX, offsetZ, rotateZ, renderer) {
-  const response = await fetch(url);
-  const meshData = await response.json();
+export async function loadHemisphere(surfaceUrl, curvatureUrl, hemi, offsetX, offsetZ, rotateZ, renderer) {
+  // Load FreeSurfer surface and curvature files
+  const surface = await loadFreeSurferSurface(surfaceUrl);
+  const curvature = await loadFreeSurferCurvature(curvatureUrl);
+  
+  // Combine into mesh data object
+  const meshData = {
+    vertices: surface.vertices,
+    triangles: surface.triangles,
+    curvature: Array.from(curvature)
+  };
   
   const polyData = createPolyDataFromMesh(meshData, offsetX, offsetZ, rotateZ);
   

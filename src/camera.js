@@ -8,8 +8,9 @@ import { getRenderer, getRenderWindow } from './state.js';
  * @param {Array} center - Target focal point [x, y, z]
  * @param {Array} normal - Surface normal direction [x, y, z]
  * @param {number} distance - Camera distance from center
+ * @param {Function} onComplete - Optional callback when animation completes
  */
-export function positionCameraForLabel(center, normal, distance = 800) {
+export function positionCameraForLabel(center, normal, distance = 800, onComplete = null) {
   const renderer = getRenderer();
   if (!renderer) return;
   
@@ -67,6 +68,9 @@ export function positionCameraForLabel(center, normal, distance = 800) {
     // Continue animation if not finished
     if (t < 1.0) {
       requestAnimationFrame(animate);
+    } else if (onComplete) {
+      // Call completion callback
+      onComplete();
     }
   }
   
