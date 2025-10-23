@@ -140,6 +140,31 @@ export function parseFreeSurferCurvature(buffer) {
  * @param {ArrayBuffer} buffer - Binary data from FreeSurfer annotation file
  * @returns {Object} Object with vertex labels and color table
  */
+/**
+ * Parse FreeSurfer annotation file (.annot)
+ * Format:
+ * - int32: number of vertices
+ * - For each vertex:
+ *   - int32: vertex index
+ *   - int32: label value (encoded as R + G*256 + B*65536)
+ * - int32: has_colortable flag (1 if present)
+ * - If has_colortable == 1:
+ *   - int32: version (negative = version 2, positive = old version)
+ *   - int32: max_structure_index (ignored in version 2)
+ *   - int32: string length
+ *   - char[]: original filename
+ *   - int32: number of entries
+ *   - For each entry:
+ *     - int32: structure index
+ *     - char[]: name (length-prefixed string)
+ *     - int32: red
+ *     - int32: green
+ *     - int32: blue
+ *     - int32: alpha (transparency)
+ * 
+ * @param {ArrayBuffer} buffer - Binary annotation file data
+ * @returns {Object} Parsed annotation data
+ */
 export function parseFreeSurferAnnotation(buffer) {
   const dataView = new DataView(buffer);
   let offset = 0;
@@ -148,17 +173,33 @@ export function parseFreeSurferAnnotation(buffer) {
   const numVertices = dataView.getInt32(offset, false);
   offset += 4;
   
-  console.log(`FreeSurfer annotation: ${numVertices} vertices`);
+  // Sanity check
+  if (numVertices < 0 || numVertices > 10000000) {
+    throw new Error(`Invalid number of vertices: ${numVertices}`);
+  }
   
   // Read vertex indices and labels
   const vertexIndices = new Int32Array(numVertices);
   const vertexLabels = new Int32Array(numVertices);
   
   for (let i = 0; i < numVertices; i++) {
+    if (offset + 8 > buffer.byteLength) {
+      throw new Error(`Buffer overflow reading vertex ${i} at offset ${offset}`);
+    }
     vertexIndices[i] = dataView.getInt32(offset, false);
     offset += 4;
     vertexLabels[i] = dataView.getInt32(offset, false);
     offset += 4;
+  }
+  
+  // Check if there's more data (color table)
+  if (offset >= buffer.byteLength) {
+    return {
+      numVertices,
+      vertexIndices,
+      vertexLabels,
+      colorTable: null
+    };
   }
   
   // Check if color table exists
@@ -168,45 +209,89 @@ export function parseFreeSurferAnnotation(buffer) {
   let colorTable = null;
   
   if (hasColorTable === 1) {
-    // Read color table
-    // Number of entries
-    const numEntries = dataView.getInt32(offset, false);
+    // Read version indicator (often negative in version 2)
+    const versionOrNumEntries = dataView.getInt32(offset, false);
     offset += 4;
     
-    // Original filename length
-    const origFileNameLength = dataView.getInt32(offset, false);
-    offset += 4;
+    // In version 2, the next value is max_structure_index (which we skip)
+    const isVersion2 = versionOrNumEntries < 0;
     
-    // Original filename
-    let origFileName = '';
-    for (let i = 0; i < origFileNameLength; i++) {
-      origFileName += String.fromCharCode(dataView.getUint8(offset++));
+    if (isVersion2) {
+      // Read and ignore max_structure_index
+      offset += 4;
     }
     
+    // Read filename length
+    const filenameLength = dataView.getInt32(offset, false);
+    offset += 4;
+    
+    // Sanity check
+    if (filenameLength < 0 || filenameLength > 10000) {
+      throw new Error(`Invalid filename length: ${filenameLength}`);
+    }
+    
+    // Skip filename
+    offset += filenameLength;
+    
     // Number of entries in color table
+    if (offset + 4 > buffer.byteLength) {
+      throw new Error(`Not enough data for numTableEntries at offset ${offset}`);
+    }
     const numTableEntries = dataView.getInt32(offset, false);
     offset += 4;
     
+    // Sanity check
+    if (numTableEntries < 0 || numTableEntries > 10000) {
+      throw new Error(`Invalid number of table entries: ${numTableEntries}`);
+    }
+    
     colorTable = {
       numEntries: numTableEntries,
-      origFileName,
       entries: []
     };
     
     // Read each color table entry
     for (let i = 0; i < numTableEntries; i++) {
+      if (offset + 4 > buffer.byteLength) {
+        console.warn(`Buffer overflow at entry ${i}, stopping color table read`);
+        break;
+      }
+      
       // Structure index
       const structure = dataView.getInt32(offset, false);
       offset += 4;
       
       // Name length
+      if (offset + 4 > buffer.byteLength) {
+        console.warn(`Buffer overflow reading name length at entry ${i}`);
+        break;
+      }
       const nameLength = dataView.getInt32(offset, false);
       offset += 4;
+      
+      // Sanity check
+      if (nameLength < 0 || nameLength > 1000) {
+        console.warn(`Invalid name length ${nameLength} at entry ${i}, skipping rest`);
+        break;
+      }
       
       // Name string
       let name = '';
       for (let j = 0; j < nameLength; j++) {
-        name += String.fromCharCode(dataView.getUint8(offset++));
+        if (offset >= buffer.byteLength) {
+          console.warn(`Buffer overflow reading name at entry ${i}`);
+          break;
+        }
+        const charCode = dataView.getUint8(offset++);
+        if (charCode > 0) { // Skip null bytes
+          name += String.fromCharCode(charCode);
+        }
+      }
+      
+      // Check if we have enough space for RGBA values
+      if (offset + 16 > buffer.byteLength) {
+        console.warn(`Buffer overflow reading RGBA at entry ${i}: ${name}`);
+        break;
       }
       
       // RGBA values

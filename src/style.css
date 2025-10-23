@@ -91,7 +91,7 @@ a:visited {
 }
 
 /* Geometry Selector */
-.geometry-selector {
+.geometry-selector, .atlas-selector {
   margin: 1rem 0;
   padding: 1rem;
   background: #333;
@@ -99,7 +99,7 @@ a:visited {
   border: 1px solid #444;
 }
 
-.geometry-selector label {
+.geometry-selector label, .atlas-selector label {
   display: block;
   margin-bottom: 0.5rem;
   font-size: 0.9rem;
@@ -109,7 +109,7 @@ a:visited {
   letter-spacing: 0.5px;
 }
 
-.geometry-selector select {
+.geometry-selector select, .atlas-selector select {
   width: 100%;
   background: #2c2c2c;
   border: 1px solid #555;
@@ -121,18 +121,18 @@ a:visited {
   transition: all 0.2s ease;
 }
 
-.geometry-selector select:hover {
+.geometry-selector select:hover, .atlas-selector select:hover {
   border-color: #666;
   background: #333;
 }
 
-.geometry-selector select:focus {
+.geometry-selector select:focus, .atlas-selector select:focus {
   outline: none;
   border-color: #4a90e2;
   box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
 }
 
-.geometry-selector select option {
+.geometry-selector select option, .atlas-selector select option {
   background: #2c2c2c;
   color: #e0e0e0;
   padding: 0.5rem;
@@ -203,6 +203,36 @@ a:visited {
   flex: 1;
   background: #0a0a0a;
   position: relative;
+}
+
+/* Floating button in VTK container */
+.floating-btn {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  background: rgba(44, 44, 44, 0.95);
+  color: #e0e0e0;
+  border: 1px solid #555;
+  border-radius: 8px;
+  padding: 0.6rem 0.9rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(10px);
+}
+
+.floating-btn:hover {
+  background: rgba(74, 144, 226, 0.95);
+  border-color: #4a90e2;
+  transform: scale(1.05);
+  box-shadow: 0 6px 16px rgba(74, 144, 226, 0.3);
+}
+
+.floating-btn:active {
+  transform: scale(0.98);
 }
 
 /* Scrollbar styling */

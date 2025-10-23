@@ -5,6 +5,9 @@
   var __getOwnPropNames = Object.getOwnPropertyNames;
   var __getProtoOf = Object.getPrototypeOf;
   var __hasOwnProp = Object.prototype.hasOwnProperty;
+  var __esm = (fn, res) => function __init() {
+    return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+  };
   var __commonJS = (cb, mod) => function __require() {
     return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
   };
@@ -1618,6 +1621,236 @@
         };
         return SparkMD5;
       });
+    }
+  });
+
+  // src/freesurfer.js
+  var freesurfer_exports = {};
+  __export(freesurfer_exports, {
+    loadFreeSurferAnnotation: () => loadFreeSurferAnnotation,
+    loadFreeSurferCurvature: () => loadFreeSurferCurvature,
+    loadFreeSurferSurface: () => loadFreeSurferSurface,
+    parseFreeSurferAnnotation: () => parseFreeSurferAnnotation,
+    parseFreeSurferCurvature: () => parseFreeSurferCurvature,
+    parseFreeSurferSurface: () => parseFreeSurferSurface
+  });
+  function parseFreeSurferSurface(buffer) {
+    const dataView = new DataView(buffer);
+    let offset = 0;
+    const magic1 = dataView.getUint8(offset++);
+    const magic2 = dataView.getUint8(offset++);
+    const magic3 = dataView.getUint8(offset++);
+    if (magic1 !== 255 || magic2 !== 255 || magic3 !== 254) {
+      throw new Error(`Invalid FreeSurfer surface file magic number: ${magic1}, ${magic2}, ${magic3}`);
+    }
+    let comment = "";
+    while (offset < buffer.byteLength) {
+      const char = dataView.getUint8(offset++);
+      if (char === 10) {
+        const nextChar = dataView.getUint8(offset);
+        if (nextChar === 10) {
+          offset++;
+          break;
+        }
+      }
+      comment += String.fromCharCode(char);
+    }
+    const numVertices = dataView.getInt32(offset, false);
+    offset += 4;
+    const numFaces = dataView.getInt32(offset, false);
+    offset += 4;
+    console.log(`FreeSurfer surface: ${numVertices} vertices, ${numFaces} faces`);
+    const vertices = [];
+    for (let i = 0; i < numVertices; i++) {
+      const x = dataView.getFloat32(offset, false);
+      offset += 4;
+      const y = dataView.getFloat32(offset, false);
+      offset += 4;
+      const z = dataView.getFloat32(offset, false);
+      offset += 4;
+      vertices.push([x, y, z]);
+    }
+    const triangles = [];
+    for (let i = 0; i < numFaces; i++) {
+      const v0 = dataView.getInt32(offset, false);
+      offset += 4;
+      const v1 = dataView.getInt32(offset, false);
+      offset += 4;
+      const v2 = dataView.getInt32(offset, false);
+      offset += 4;
+      triangles.push([v0, v1, v2]);
+    }
+    return {
+      vertices,
+      triangles,
+      numVertices,
+      numFaces,
+      comment
+    };
+  }
+  function parseFreeSurferCurvature(buffer) {
+    const dataView = new DataView(buffer);
+    let offset = 0;
+    const magic1 = dataView.getUint8(offset++);
+    const magic2 = dataView.getUint8(offset++);
+    const magic3 = dataView.getUint8(offset++);
+    if (magic1 !== 255 || magic2 !== 255 || magic3 !== 255) {
+      throw new Error(`Invalid FreeSurfer curvature file magic number: ${magic1}, ${magic2}, ${magic3}`);
+    }
+    const numVertices = dataView.getInt32(offset, false);
+    offset += 4;
+    const numFaces = dataView.getInt32(offset, false);
+    offset += 4;
+    const valuesPerVertex = dataView.getInt32(offset, false);
+    offset += 4;
+    console.log(`FreeSurfer curvature: ${numVertices} vertices, ${valuesPerVertex} values per vertex`);
+    const curvature = new Float32Array(numVertices);
+    for (let i = 0; i < numVertices; i++) {
+      curvature[i] = dataView.getFloat32(offset, false);
+      offset += 4;
+    }
+    return curvature;
+  }
+  function parseFreeSurferAnnotation(buffer) {
+    const dataView = new DataView(buffer);
+    let offset = 0;
+    const numVertices = dataView.getInt32(offset, false);
+    offset += 4;
+    if (numVertices < 0 || numVertices > 1e7) {
+      throw new Error(`Invalid number of vertices: ${numVertices}`);
+    }
+    const vertexIndices = new Int32Array(numVertices);
+    const vertexLabels = new Int32Array(numVertices);
+    for (let i = 0; i < numVertices; i++) {
+      if (offset + 8 > buffer.byteLength) {
+        throw new Error(`Buffer overflow reading vertex ${i} at offset ${offset}`);
+      }
+      vertexIndices[i] = dataView.getInt32(offset, false);
+      offset += 4;
+      vertexLabels[i] = dataView.getInt32(offset, false);
+      offset += 4;
+    }
+    if (offset >= buffer.byteLength) {
+      return {
+        numVertices,
+        vertexIndices,
+        vertexLabels,
+        colorTable: null
+      };
+    }
+    const hasColorTable = dataView.getInt32(offset, false);
+    offset += 4;
+    let colorTable = null;
+    if (hasColorTable === 1) {
+      const versionOrNumEntries = dataView.getInt32(offset, false);
+      offset += 4;
+      const isVersion2 = versionOrNumEntries < 0;
+      if (isVersion2) {
+        offset += 4;
+      }
+      const filenameLength = dataView.getInt32(offset, false);
+      offset += 4;
+      if (filenameLength < 0 || filenameLength > 1e4) {
+        throw new Error(`Invalid filename length: ${filenameLength}`);
+      }
+      offset += filenameLength;
+      if (offset + 4 > buffer.byteLength) {
+        throw new Error(`Not enough data for numTableEntries at offset ${offset}`);
+      }
+      const numTableEntries = dataView.getInt32(offset, false);
+      offset += 4;
+      if (numTableEntries < 0 || numTableEntries > 1e4) {
+        throw new Error(`Invalid number of table entries: ${numTableEntries}`);
+      }
+      colorTable = {
+        numEntries: numTableEntries,
+        entries: []
+      };
+      for (let i = 0; i < numTableEntries; i++) {
+        if (offset + 4 > buffer.byteLength) {
+          console.warn(`Buffer overflow at entry ${i}, stopping color table read`);
+          break;
+        }
+        const structure = dataView.getInt32(offset, false);
+        offset += 4;
+        if (offset + 4 > buffer.byteLength) {
+          console.warn(`Buffer overflow reading name length at entry ${i}`);
+          break;
+        }
+        const nameLength = dataView.getInt32(offset, false);
+        offset += 4;
+        if (nameLength < 0 || nameLength > 1e3) {
+          console.warn(`Invalid name length ${nameLength} at entry ${i}, skipping rest`);
+          break;
+        }
+        let name = "";
+        for (let j = 0; j < nameLength; j++) {
+          if (offset >= buffer.byteLength) {
+            console.warn(`Buffer overflow reading name at entry ${i}`);
+            break;
+          }
+          const charCode = dataView.getUint8(offset++);
+          if (charCode > 0) {
+            name += String.fromCharCode(charCode);
+          }
+        }
+        if (offset + 16 > buffer.byteLength) {
+          console.warn(`Buffer overflow reading RGBA at entry ${i}: ${name}`);
+          break;
+        }
+        const r = dataView.getInt32(offset, false);
+        offset += 4;
+        const g = dataView.getInt32(offset, false);
+        offset += 4;
+        const b = dataView.getInt32(offset, false);
+        offset += 4;
+        const a = dataView.getInt32(offset, false);
+        offset += 4;
+        const label = r + g * 256 + b * 65536;
+        colorTable.entries.push({
+          structure,
+          name,
+          r,
+          g,
+          b,
+          a,
+          label
+        });
+      }
+    }
+    return {
+      numVertices,
+      vertexIndices,
+      vertexLabels,
+      colorTable
+    };
+  }
+  async function loadFreeSurferSurface(url) {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Failed to load surface: ${url}`);
+    }
+    const buffer = await response.arrayBuffer();
+    return parseFreeSurferSurface(buffer);
+  }
+  async function loadFreeSurferCurvature(url) {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Failed to load curvature: ${url}`);
+    }
+    const buffer = await response.arrayBuffer();
+    return parseFreeSurferCurvature(buffer);
+  }
+  async function loadFreeSurferAnnotation(url) {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Failed to load annotation: ${url}`);
+    }
+    const buffer = await response.arrayBuffer();
+    return parseFreeSurferAnnotation(buffer);
+  }
+  var init_freesurfer = __esm({
+    "src/freesurfer.js"() {
     }
   });
 
@@ -35796,7 +36029,11 @@ fn main(
     usePlainEnglishNames: false,
     currentGeometry: "pial",
     // Current geometry type (default)
-    geometryOffsets
+    geometryOffsets,
+    atlasesConfig: null,
+    // Available atlases configuration
+    currentAtlas: null
+    // Current atlas ID
   };
   function getHemisphereConfig(hemi) {
     return state.hemisphereData[hemi];
@@ -35851,6 +36088,16 @@ fn main(
   }
   function getCurrentGeometry() {
     return state.currentGeometry;
+  }
+  function setAtlasesConfig(atlasesConfig) {
+    state.atlasesConfig = atlasesConfig;
+  }
+  function setCurrentAtlas(atlasId) {
+    state.currentAtlas = atlasId;
+  }
+  function getCurrentAtlasConfig() {
+    if (!state.atlasesConfig || !state.currentAtlas) return null;
+    return state.atlasesConfig.atlases.find((a) => a.id === state.currentAtlas);
   }
 
   // src/geometry.js
@@ -37163,102 +37410,8 @@ fn main(
     });
   }
 
-  // src/freesurfer.js
-  function parseFreeSurferSurface(buffer) {
-    const dataView = new DataView(buffer);
-    let offset = 0;
-    const magic1 = dataView.getUint8(offset++);
-    const magic2 = dataView.getUint8(offset++);
-    const magic3 = dataView.getUint8(offset++);
-    if (magic1 !== 255 || magic2 !== 255 || magic3 !== 254) {
-      throw new Error(`Invalid FreeSurfer surface file magic number: ${magic1}, ${magic2}, ${magic3}`);
-    }
-    let comment = "";
-    while (offset < buffer.byteLength) {
-      const char = dataView.getUint8(offset++);
-      if (char === 10) {
-        const nextChar = dataView.getUint8(offset);
-        if (nextChar === 10) {
-          offset++;
-          break;
-        }
-      }
-      comment += String.fromCharCode(char);
-    }
-    const numVertices = dataView.getInt32(offset, false);
-    offset += 4;
-    const numFaces = dataView.getInt32(offset, false);
-    offset += 4;
-    console.log(`FreeSurfer surface: ${numVertices} vertices, ${numFaces} faces`);
-    const vertices = [];
-    for (let i = 0; i < numVertices; i++) {
-      const x = dataView.getFloat32(offset, false);
-      offset += 4;
-      const y = dataView.getFloat32(offset, false);
-      offset += 4;
-      const z = dataView.getFloat32(offset, false);
-      offset += 4;
-      vertices.push([x, y, z]);
-    }
-    const triangles = [];
-    for (let i = 0; i < numFaces; i++) {
-      const v0 = dataView.getInt32(offset, false);
-      offset += 4;
-      const v1 = dataView.getInt32(offset, false);
-      offset += 4;
-      const v2 = dataView.getInt32(offset, false);
-      offset += 4;
-      triangles.push([v0, v1, v2]);
-    }
-    return {
-      vertices,
-      triangles,
-      numVertices,
-      numFaces,
-      comment
-    };
-  }
-  function parseFreeSurferCurvature(buffer) {
-    const dataView = new DataView(buffer);
-    let offset = 0;
-    const magic1 = dataView.getUint8(offset++);
-    const magic2 = dataView.getUint8(offset++);
-    const magic3 = dataView.getUint8(offset++);
-    if (magic1 !== 255 || magic2 !== 255 || magic3 !== 255) {
-      throw new Error(`Invalid FreeSurfer curvature file magic number: ${magic1}, ${magic2}, ${magic3}`);
-    }
-    const numVertices = dataView.getInt32(offset, false);
-    offset += 4;
-    const numFaces = dataView.getInt32(offset, false);
-    offset += 4;
-    const valuesPerVertex = dataView.getInt32(offset, false);
-    offset += 4;
-    console.log(`FreeSurfer curvature: ${numVertices} vertices, ${valuesPerVertex} values per vertex`);
-    const curvature = new Float32Array(numVertices);
-    for (let i = 0; i < numVertices; i++) {
-      curvature[i] = dataView.getFloat32(offset, false);
-      offset += 4;
-    }
-    return curvature;
-  }
-  async function loadFreeSurferSurface(url) {
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`Failed to load surface: ${url}`);
-    }
-    const buffer = await response.arrayBuffer();
-    return parseFreeSurferSurface(buffer);
-  }
-  async function loadFreeSurferCurvature(url) {
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`Failed to load curvature: ${url}`);
-    }
-    const buffer = await response.arrayBuffer();
-    return parseFreeSurferCurvature(buffer);
-  }
-
   // src/loader.js
+  init_freesurfer();
   async function loadHemisphere(surfaceUrl, curvatureUrl, hemi, offsetX, offsetZ, rotateZ4, renderer) {
     const surface = await loadFreeSurferSurface(surfaceUrl);
     const curvature = await loadFreeSurferCurvature(curvatureUrl);
@@ -37282,10 +37435,6 @@ fn main(
     });
     return actor;
   }
-  async function loadLabels(url) {
-    const response = await fetch(url);
-    return await response.json();
-  }
   async function loadLabelNames(url) {
     try {
       const response = await fetch(url);
@@ -37294,6 +37443,63 @@ fn main(
       console.warn("Could not load label names, using FreeSurfer names only:", error);
       return null;
     }
+  }
+  async function loadAtlasesConfig(url) {
+    const response = await fetch(url);
+    return await response.json();
+  }
+  async function loadAnnotationLabels(lhAnnotUrl, rhAnnotUrl) {
+    const { parseFreeSurferAnnotation: parseFreeSurferAnnotation2 } = await Promise.resolve().then(() => (init_freesurfer(), freesurfer_exports));
+    const lhResponse = await fetch(lhAnnotUrl);
+    const lhBuffer = await lhResponse.arrayBuffer();
+    const lhAnnotation = parseFreeSurferAnnotation2(lhBuffer);
+    const rhResponse = await fetch(rhAnnotUrl);
+    const rhBuffer = await rhResponse.arrayBuffer();
+    const rhAnnotation = parseFreeSurferAnnotation2(rhBuffer);
+    const labels = {};
+    if (lhAnnotation.colorTable) {
+      for (const entry of lhAnnotation.colorTable.entries) {
+        if (entry.name === "unknown" || entry.name === "corpuscallosum" || entry.name === "Unknown" || entry.name === "Medial_wall") {
+          continue;
+        }
+        const vertices = [];
+        for (let i = 0; i < lhAnnotation.vertexLabels.length; i++) {
+          if (lhAnnotation.vertexLabels[i] === entry.label) {
+            vertices.push(lhAnnotation.vertexIndices[i]);
+          }
+        }
+        if (vertices.length > 0) {
+          const labelName = `${entry.name}-lh`;
+          labels[labelName] = {
+            hemi: "lh",
+            vertices,
+            color: [entry.r, entry.g, entry.b]
+          };
+        }
+      }
+    }
+    if (rhAnnotation.colorTable) {
+      for (const entry of rhAnnotation.colorTable.entries) {
+        if (entry.name === "unknown" || entry.name === "corpuscallosum" || entry.name === "Unknown" || entry.name === "Medial_wall") {
+          continue;
+        }
+        const vertices = [];
+        for (let i = 0; i < rhAnnotation.vertexLabels.length; i++) {
+          if (rhAnnotation.vertexLabels[i] === entry.label) {
+            vertices.push(rhAnnotation.vertexIndices[i]);
+          }
+        }
+        if (vertices.length > 0) {
+          const labelName = `${entry.name}-rh`;
+          labels[labelName] = {
+            hemi: "rh",
+            vertices,
+            color: [entry.r, entry.g, entry.b]
+          };
+        }
+      }
+    }
+    return labels;
   }
 
   // node_modules/@kitware/vtk.js/Common/Core/MatrixBuilder.js
@@ -38583,6 +38789,31 @@ fn main(
       }
     });
   }
+  function initializeAtlasSelector(atlasesConfig, onAtlasChange) {
+    const atlasSelect = document.getElementById("atlas-select");
+    if (!atlasSelect) {
+      console.warn("Atlas selector not found");
+      return;
+    }
+    atlasSelect.innerHTML = "";
+    atlasesConfig.atlases.forEach((atlas) => {
+      const option = document.createElement("option");
+      option.value = atlas.id;
+      option.textContent = atlas.name;
+      option.title = atlas.description;
+      if (atlas.default) {
+        option.selected = true;
+      }
+      atlasSelect.appendChild(option);
+    });
+    atlasSelect.addEventListener("change", (e) => {
+      const newAtlas = e.target.value;
+      console.log("Atlas changed to:", newAtlas);
+      if (onAtlasChange) {
+        onAtlasChange(newAtlas);
+      }
+    });
+  }
 
   // src/main.js
   async function loadBrainGeometry(geometry) {
@@ -38657,6 +38888,42 @@ fn main(
       showError(`Error loading ${newGeometry} geometry. File may not exist.`);
     }
   }
+  async function handleAtlasChange(newAtlasId) {
+    try {
+      showLoading();
+      const loadingEl = document.querySelector(".loading");
+      if (loadingEl) {
+        loadingEl.textContent = "Loading new atlas...";
+      }
+      setCurrentAtlas(newAtlasId);
+      const atlasConfig = getCurrentAtlasConfig();
+      if (!atlasConfig) {
+        throw new Error(`Atlas ${newAtlasId} not found`);
+      }
+      console.log("Loading atlas:", atlasConfig.name);
+      const labelsData = await loadAnnotationLabels(
+        `../data/fsaverage/label/${atlasConfig.files.lh}`,
+        `../data/fsaverage/label/${atlasConfig.files.rh}`
+      );
+      setLabelsData(labelsData);
+      console.log("Labels loaded:", Object.keys(labelsData).length);
+      if (atlasConfig.lookup) {
+        const labelNamesData = await loadLabelNames(`../data/lookups/${atlasConfig.lookup}`);
+        setLabelNamesData(labelNamesData);
+        if (labelNamesData) {
+          console.log("Label names loaded for", atlasConfig.name);
+        }
+      } else {
+        setLabelNamesData(null);
+      }
+      populateLabelList(labelsData);
+      resetToDefaultColoring();
+      hideLoading();
+    } catch (error) {
+      console.error("Error loading atlas:", error);
+      showError(`Error loading atlas. Please try again.`);
+    }
+  }
   async function initializeApp() {
     try {
       const fullScreenRenderer = vtkFullScreenRenderWindow$1.newInstance({
@@ -38667,19 +38934,31 @@ fn main(
       const renderWindow = fullScreenRenderer.getRenderWindow();
       setRenderer(renderer, renderWindow);
       createOrientationWidget(renderWindow);
-      console.log("Loading labels...");
-      const labelsData = await loadLabels("../data/json/labels.json");
+      console.log("Loading atlases configuration...");
+      const atlasesConfig = await loadAtlasesConfig("../data/atlases.json");
+      setAtlasesConfig(atlasesConfig);
+      const defaultAtlas = atlasesConfig.atlases.find((a) => a.default) || atlasesConfig.atlases[0];
+      setCurrentAtlas(defaultAtlas.id);
+      console.log("Default atlas:", defaultAtlas.name);
+      console.log("Loading labels from annotation files...");
+      const labelsData = await loadAnnotationLabels(
+        `../data/fsaverage/label/${defaultAtlas.files.lh}`,
+        `../data/fsaverage/label/${defaultAtlas.files.rh}`
+      );
       setLabelsData(labelsData);
       console.log("Labels loaded:", Object.keys(labelsData).length);
-      const labelNamesData = await loadLabelNames("../data/aparc.a2009s.lookup.json");
-      setLabelNamesData(labelNamesData);
-      if (labelNamesData) {
-        console.log("Label names loaded");
+      if (defaultAtlas.lookup) {
+        const labelNamesData = await loadLabelNames(`../data/lookups/${defaultAtlas.lookup}`);
+        setLabelNamesData(labelNamesData);
+        if (labelNamesData) {
+          console.log("Label names loaded for", defaultAtlas.name);
+        }
       }
       populateLabelList(labelsData);
       initializeHelpModal();
       initializeNameToggle();
       initializeGeometrySelector(handleGeometryChange);
+      initializeAtlasSelector(atlasesConfig, handleAtlasChange);
       const initialGeometry = getCurrentGeometry();
       await loadBrainGeometry(initialGeometry);
       console.log("Brain model loaded successfully!");

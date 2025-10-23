@@ -78,3 +78,91 @@ export async function loadLabelNames(url) {
     return null;
   }
 }
+
+/**
+ * Load atlases configuration
+ * @param {string} url - URL to atlases JSON file
+ * @returns {Promise<Object>} Atlases configuration
+ */
+export async function loadAtlasesConfig(url) {
+  const response = await fetch(url);
+  return await response.json();
+}
+
+/**
+ * Load FreeSurfer annotation file and convert to labels format
+ * @param {string} lhAnnotUrl - URL to left hemisphere annotation file
+ * @param {string} rhAnnotUrl - URL to right hemisphere annotation file
+ * @returns {Promise<Object>} Labels data in format compatible with existing code
+ */
+export async function loadAnnotationLabels(lhAnnotUrl, rhAnnotUrl) {
+  const { parseFreeSurferAnnotation } = await import('./freesurfer.js');
+  
+  // Load both hemisphere annotations
+  const lhResponse = await fetch(lhAnnotUrl);
+  const lhBuffer = await lhResponse.arrayBuffer();
+  const lhAnnotation = parseFreeSurferAnnotation(lhBuffer);
+  
+  const rhResponse = await fetch(rhAnnotUrl);
+  const rhBuffer = await rhResponse.arrayBuffer();
+  const rhAnnotation = parseFreeSurferAnnotation(rhBuffer);
+  
+  // Convert to labels format
+  const labels = {};
+  
+  // Process left hemisphere
+  if (lhAnnotation.colorTable) {
+    for (const entry of lhAnnotation.colorTable.entries) {
+      if (entry.name === 'unknown' || entry.name === 'corpuscallosum' || entry.name === 'Unknown' || entry.name === 'Medial_wall') {
+        continue; // Skip unknown, corpus callosum, and medial wall
+      }
+      
+      // Find all vertices with this label
+      const vertices = [];
+      for (let i = 0; i < lhAnnotation.vertexLabels.length; i++) {
+        if (lhAnnotation.vertexLabels[i] === entry.label) {
+          vertices.push(lhAnnotation.vertexIndices[i]);
+        }
+      }
+      
+      if (vertices.length > 0) {
+        // Add hemisphere suffix since annotation names don't include it
+        const labelName = `${entry.name}-lh`;
+        labels[labelName] = {
+          hemi: 'lh',
+          vertices: vertices,
+          color: [entry.r, entry.g, entry.b]
+        };
+      }
+    }
+  }
+  
+  // Process right hemisphere
+  if (rhAnnotation.colorTable) {
+    for (const entry of rhAnnotation.colorTable.entries) {
+      if (entry.name === 'unknown' || entry.name === 'corpuscallosum' || entry.name === 'Unknown' || entry.name === 'Medial_wall') {
+        continue; // Skip unknown, corpus callosum, and medial wall
+      }
+      
+      // Find all vertices with this label
+      const vertices = [];
+      for (let i = 0; i < rhAnnotation.vertexLabels.length; i++) {
+        if (rhAnnotation.vertexLabels[i] === entry.label) {
+          vertices.push(rhAnnotation.vertexIndices[i]);
+        }
+      }
+      
+      if (vertices.length > 0) {
+        // Add hemisphere suffix since annotation names don't include it
+        const labelName = `${entry.name}-rh`;
+        labels[labelName] = {
+          hemi: 'rh',
+          vertices: vertices,
+          color: [entry.r, entry.g, entry.b]
+        };
+      }
+    }
+  }
+  
+  return labels;
+}

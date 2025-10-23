@@ -18,9 +18,20 @@ import {
     setCurrentGeometry,
     getCurrentGeometry,
     getRenderer,
-    getCurrentSelectedLabel
+    getCurrentSelectedLabel,
+    setAtlasesConfig,
+    getAtlasesConfig,
+    setCurrentAtlas,
+    getCurrentAtlas,
+    getCurrentAtlasConfig
 } from './state.js';
-import { loadHemisphere, loadLabels, loadLabelNames } from './loader.js';
+import { 
+  loadHemisphere, 
+  loadLabels, 
+  loadLabelNames, 
+  loadAtlasesConfig,
+  loadAnnotationLabels
+} from './loader.js';
 import { createOrientationWidget } from './orientation.js';
 import { resetCamera } from './camera.js';
 import { 
@@ -28,6 +39,7 @@ import {
   initializeHelpModal, 
   initializeNameToggle,
   initializeGeometrySelector,
+  initializeAtlasSelector,
   hideLoading,
   showError,
   showLoading
@@ -141,6 +153,62 @@ async function handleGeometryChange(newGeometry) {
 }
 
 /**
+ * Handle atlas change
+ * @param {string} newAtlasId - New atlas ID
+ */
+async function handleAtlasChange(newAtlasId) {
+  try {
+    showLoading();
+    const loadingEl = document.querySelector('.loading');
+    if (loadingEl) {
+      loadingEl.textContent = 'Loading new atlas...';
+    }
+    
+    // Update current atlas
+    setCurrentAtlas(newAtlasId);
+    const atlasConfig = getCurrentAtlasConfig();
+    
+    if (!atlasConfig) {
+      throw new Error(`Atlas ${newAtlasId} not found`);
+    }
+    
+    console.log('Loading atlas:', atlasConfig.name);
+    
+    // Load annotation files for this atlas
+    const labelsData = await loadAnnotationLabels(
+      `../data/fsaverage/label/${atlasConfig.files.lh}`,
+      `../data/fsaverage/label/${atlasConfig.files.rh}`
+    );
+    
+    setLabelsData(labelsData);
+    console.log('Labels loaded:', Object.keys(labelsData).length);
+    
+    // Load lookup file if available
+    if (atlasConfig.lookup) {
+      const labelNamesData = await loadLabelNames(`../data/lookups/${atlasConfig.lookup}`);
+      setLabelNamesData(labelNamesData);
+      if (labelNamesData) {
+        console.log('Label names loaded for', atlasConfig.name);
+      }
+    } else {
+      setLabelNamesData(null);
+    }
+    
+    // Refresh label list
+    populateLabelList(labelsData);
+    
+    // Reset any selected label and coloring
+    resetToDefaultColoring();
+    
+    hideLoading();
+    
+  } catch (error) {
+    console.error('Error loading atlas:', error);
+    showError(`Error loading atlas. Please try again.`);
+  }
+}
+
+/**
  * Initialize the brain atlas visualizer application
  */
 async function initializeApp() {
@@ -160,17 +228,32 @@ async function initializeApp() {
     // Add orientation widget in bottom-left corner
     createOrientationWidget(renderWindow);
 
-    // Load labels data
-    console.log('Loading labels...');
-    const labelsData = await loadLabels('../data/json/labels.json');
+    // Load atlases configuration
+    console.log('Loading atlases configuration...');
+    const atlasesConfig = await loadAtlasesConfig('../data/atlases.json');
+    setAtlasesConfig(atlasesConfig);
+    
+    // Find and set default atlas
+    const defaultAtlas = atlasesConfig.atlases.find(a => a.default) || atlasesConfig.atlases[0];
+    setCurrentAtlas(defaultAtlas.id);
+    console.log('Default atlas:', defaultAtlas.name);
+
+    // Load labels data from annotation files
+    console.log('Loading labels from annotation files...');
+    const labelsData = await loadAnnotationLabels(
+      `../data/fsaverage/label/${defaultAtlas.files.lh}`,
+      `../data/fsaverage/label/${defaultAtlas.files.rh}`
+    );
     setLabelsData(labelsData);
     console.log('Labels loaded:', Object.keys(labelsData).length);
     
-    // Load label names for plain English conversion
-    const labelNamesData = await loadLabelNames('../data/aparc.a2009s.lookup.json');
-    setLabelNamesData(labelNamesData);
-    if (labelNamesData) {
-      console.log('Label names loaded');
+    // Load label names for plain English conversion if available
+    if (defaultAtlas.lookup) {
+      const labelNamesData = await loadLabelNames(`../data/lookups/${defaultAtlas.lookup}`);
+      setLabelNamesData(labelNamesData);
+      if (labelNamesData) {
+        console.log('Label names loaded for', defaultAtlas.name);
+      }
     }
     
     // Populate label list in sidebar
@@ -180,8 +263,9 @@ async function initializeApp() {
     initializeHelpModal();
     initializeNameToggle();
     initializeGeometrySelector(handleGeometryChange);
+    initializeAtlasSelector(atlasesConfig, handleAtlasChange);
     
-    // Load initial geometry (inflated by default)
+    // Load initial geometry (pial by default)
     const initialGeometry = getCurrentGeometry();
     await loadBrainGeometry(initialGeometry);
     

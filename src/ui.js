@@ -176,3 +176,39 @@ export function initializeGeometrySelector(onGeometryChange) {
     }
   });
 }
+
+/**
+ * Initialize atlas selector dropdown
+ * @param {Object} atlasesConfig - Atlases configuration object
+ * @param {Function} onAtlasChange - Callback function when atlas changes
+ */
+export function initializeAtlasSelector(atlasesConfig, onAtlasChange) {
+  const atlasSelect = document.getElementById('atlas-select');
+  
+  if (!atlasSelect) {
+    console.warn('Atlas selector not found');
+    return;
+  }
+  
+  // Populate atlas options
+  atlasSelect.innerHTML = '';
+  atlasesConfig.atlases.forEach(atlas => {
+    const option = document.createElement('option');
+    option.value = atlas.id;
+    option.textContent = atlas.name;
+    option.title = atlas.description;
+    if (atlas.default) {
+      option.selected = true;
+    }
+    atlasSelect.appendChild(option);
+  });
+  
+  atlasSelect.addEventListener('change', (e) => {
+    const newAtlas = e.target.value;
+    console.log('Atlas changed to:', newAtlas);
+    
+    if (onAtlasChange) {
+      onAtlasChange(newAtlas);
+    }
+  });
+}

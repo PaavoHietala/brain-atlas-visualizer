@@ -49,7 +49,9 @@ export const state = {
   renderer: null,
   usePlainEnglishNames: false,
   currentGeometry: 'pial',  // Current geometry type (default)
-  geometryOffsets: geometryOffsets
+  geometryOffsets: geometryOffsets,
+  atlasesConfig: null,  // Available atlases configuration
+  currentAtlas: null    // Current atlas ID
 };
 
 /**
@@ -174,4 +176,42 @@ export function setCurrentGeometry(geometry) {
  */
 export function getCurrentGeometry() {
   return state.currentGeometry;
+}
+
+/**
+ * Set atlases configuration
+ * @param {Object} atlasesConfig - Atlases configuration
+ */
+export function setAtlasesConfig(atlasesConfig) {
+  state.atlasesConfig = atlasesConfig;
+}
+
+/**
+ * Get atlases configuration
+ */
+export function getAtlasesConfig() {
+  return state.atlasesConfig;
+}
+
+/**
+ * Set current atlas
+ * @param {string} atlasId - Atlas ID
+ */
+export function setCurrentAtlas(atlasId) {
+  state.currentAtlas = atlasId;
+}
+
+/**
+ * Get current atlas
+ */
+export function getCurrentAtlas() {
+  return state.currentAtlas;
+}
+
+/**
+ * Get current atlas configuration object
+ */
+export function getCurrentAtlasConfig() {
+  if (!state.atlasesConfig || !state.currentAtlas) return null;
+  return state.atlasesConfig.atlases.find(a => a.id === state.currentAtlas);
 }

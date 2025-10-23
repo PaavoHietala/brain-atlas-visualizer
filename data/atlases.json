@@ -1,0 +1,75 @@
+{
+  "atlases": [
+    {
+      "id": "aparc.a2009s",
+      "name": "Destrieux Atlas (aparc.a2009s)",
+      "description": "Detailed cortical parcellation with 148 regions",
+      "files": {
+        "lh": "lh.aparc.a2009s.annot",
+        "rh": "rh.aparc.a2009s.annot"
+      },
+      "lookup": "aparc.a2009s.lookup.json",
+      "default": true
+    },
+    {
+      "id": "aparc",
+      "name": "Desikan-Killiany Atlas (aparc)",
+      "description": "Standard FreeSurfer cortical parcellation with 68 regions",
+      "files": {
+        "lh": "lh.aparc.annot",
+        "rh": "rh.aparc.annot"
+      },
+      "lookup": "aparc.lookup.json"
+    },
+    {
+      "id": "HCPMMP1",
+      "name": "HCP Multi-Modal Parcellation",
+      "description": "Human Connectome Project parcellation with 180 regions per hemisphere",
+      "files": {
+        "lh": "lh.HCPMMP1.annot",
+        "rh": "rh.HCPMMP1.annot"
+      },
+      "lookup": "HCPMMP1.lookup.json"
+    },
+    {
+      "id": "Yeo2011_7Networks",
+      "name": "Yeo 7 Networks",
+      "description": "7 intrinsic connectivity networks",
+      "files": {
+        "lh": "lh.Yeo2011_7Networks_N1000.annot",
+        "rh": "rh.Yeo2011_7Networks_N1000.annot"
+      },
+      "lookup": "Yeo2011_7Networks.lookup.json"
+    },
+    {
+      "id": "Yeo2011_17Networks",
+      "name": "Yeo 17 Networks",
+      "description": "17 intrinsic connectivity networks",
+      "files": {
+        "lh": "lh.Yeo2011_17Networks_N1000.annot",
+        "rh": "rh.Yeo2011_17Networks_N1000.annot"
+      },
+      "lookup": "Yeo2011_17Networks.lookup.json"
+    },
+    {
+      "id": "PALS_B12_Brodmann",
+      "name": "Brodmann Areas",
+      "description": "Classic Brodmann area parcellation",
+      "files": {
+        "lh": "lh.PALS_B12_Brodmann.annot",
+        "rh": "rh.PALS_B12_Brodmann.annot"
+      },
+      "lookup": "PALS_B12_Brodmann.lookup.json"
+    },
+    {
+      "id": "PALS_B12_Lobes",
+      "name": "Lobar Parcellation",
+      "description": "Division into major brain lobes",
+      "files": {
+        "lh": "lh.PALS_B12_Lobes.annot",
+        "rh": "rh.PALS_B12_Lobes.annot"
+      },
+      "lookup": "PALS_B12_Lobes.lookup.json"
+    }
+  ]
+}
