@@ -38832,8 +38832,8 @@ fn main(
     const fsGeometry = geometryFileMap[geometry] || geometry;
     const lhConfig = getHemisphereConfig("lh");
     await loadHemisphere(
-      `../data/fsaverage/surf/lh.${fsGeometry}`,
-      `../data/fsaverage/surf/lh.curv`,
+      `./data/fsaverage/surf/lh.${fsGeometry}`,
+      `./data/fsaverage/surf/lh.curv`,
       "lh",
       lhConfig.offsetX,
       lhConfig.offsetZ,
@@ -38842,8 +38842,8 @@ fn main(
     );
     const rhConfig = getHemisphereConfig("rh");
     await loadHemisphere(
-      `../data/fsaverage/surf/rh.${fsGeometry}`,
-      `../data/fsaverage/surf/rh.curv`,
+      `./data/fsaverage/surf/rh.${fsGeometry}`,
+      `./data/fsaverage/surf/rh.curv`,
       "rh",
       rhConfig.offsetX,
       rhConfig.offsetZ,
@@ -38902,13 +38902,13 @@ fn main(
       }
       console.log("Loading atlas:", atlasConfig.name);
       const labelsData = await loadAnnotationLabels(
-        `../data/fsaverage/label/${atlasConfig.files.lh}`,
-        `../data/fsaverage/label/${atlasConfig.files.rh}`
+        `./data/fsaverage/label/${atlasConfig.files.lh}`,
+        `./data/fsaverage/label/${atlasConfig.files.rh}`
       );
       setLabelsData(labelsData);
       console.log("Labels loaded:", Object.keys(labelsData).length);
       if (atlasConfig.lookup) {
-        const labelNamesData = await loadLabelNames(`../data/lookups/${atlasConfig.lookup}`);
+        const labelNamesData = await loadLabelNames(`./data/lookups/${atlasConfig.lookup}`);
         setLabelNamesData(labelNamesData);
         if (labelNamesData) {
           console.log("Label names loaded for", atlasConfig.name);
@@ -38935,20 +38935,20 @@ fn main(
       setRenderer(renderer, renderWindow);
       createOrientationWidget(renderWindow);
       console.log("Loading atlases configuration...");
-      const atlasesConfig = await loadAtlasesConfig("../data/atlases.json");
+      const atlasesConfig = await loadAtlasesConfig("./data/atlases.json");
       setAtlasesConfig(atlasesConfig);
       const defaultAtlas = atlasesConfig.atlases.find((a) => a.default) || atlasesConfig.atlases[0];
       setCurrentAtlas(defaultAtlas.id);
       console.log("Default atlas:", defaultAtlas.name);
       console.log("Loading labels from annotation files...");
       const labelsData = await loadAnnotationLabels(
-        `../data/fsaverage/label/${defaultAtlas.files.lh}`,
-        `../data/fsaverage/label/${defaultAtlas.files.rh}`
+        `./data/fsaverage/label/${defaultAtlas.files.lh}`,
+        `./data/fsaverage/label/${defaultAtlas.files.rh}`
       );
       setLabelsData(labelsData);
       console.log("Labels loaded:", Object.keys(labelsData).length);
       if (defaultAtlas.lookup) {
-        const labelNamesData = await loadLabelNames(`../data/lookups/${defaultAtlas.lookup}`);
+        const labelNamesData = await loadLabelNames(`./data/lookups/${defaultAtlas.lookup}`);
         setLabelNamesData(labelNamesData);
         if (labelNamesData) {
           console.log("Label names loaded for", defaultAtlas.name);

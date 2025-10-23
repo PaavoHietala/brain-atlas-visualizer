@@ -72,8 +72,8 @@ async function loadBrainGeometry(geometry) {
   // Load both hemispheres with FreeSurfer binary files
   const lhConfig = getHemisphereConfig('lh');
   await loadHemisphere(
-    `../data/fsaverage/surf/lh.${fsGeometry}`,
-    `../data/fsaverage/surf/lh.curv`,
+    `./data/fsaverage/surf/lh.${fsGeometry}`,
+    `./data/fsaverage/surf/lh.curv`,
     'lh', 
     lhConfig.offsetX,
     lhConfig.offsetZ,
@@ -83,8 +83,8 @@ async function loadBrainGeometry(geometry) {
   
   const rhConfig = getHemisphereConfig('rh');
   await loadHemisphere(
-    `../data/fsaverage/surf/rh.${fsGeometry}`,
-    `../data/fsaverage/surf/rh.curv`,
+    `./data/fsaverage/surf/rh.${fsGeometry}`,
+    `./data/fsaverage/surf/rh.curv`,
     'rh', 
     rhConfig.offsetX,
     rhConfig.offsetZ,
@@ -176,8 +176,8 @@ async function handleAtlasChange(newAtlasId) {
     
     // Load annotation files for this atlas
     const labelsData = await loadAnnotationLabels(
-      `../data/fsaverage/label/${atlasConfig.files.lh}`,
-      `../data/fsaverage/label/${atlasConfig.files.rh}`
+      `./data/fsaverage/label/${atlasConfig.files.lh}`,
+      `./data/fsaverage/label/${atlasConfig.files.rh}`
     );
     
     setLabelsData(labelsData);
@@ -185,7 +185,7 @@ async function handleAtlasChange(newAtlasId) {
     
     // Load lookup file if available
     if (atlasConfig.lookup) {
-      const labelNamesData = await loadLabelNames(`../data/lookups/${atlasConfig.lookup}`);
+      const labelNamesData = await loadLabelNames(`./data/lookups/${atlasConfig.lookup}`);
       setLabelNamesData(labelNamesData);
       if (labelNamesData) {
         console.log('Label names loaded for', atlasConfig.name);
@@ -230,7 +230,7 @@ async function initializeApp() {
 
     // Load atlases configuration
     console.log('Loading atlases configuration...');
-    const atlasesConfig = await loadAtlasesConfig('../data/atlases.json');
+    const atlasesConfig = await loadAtlasesConfig('./data/atlases.json');
     setAtlasesConfig(atlasesConfig);
     
     // Find and set default atlas
@@ -241,15 +241,15 @@ async function initializeApp() {
     // Load labels data from annotation files
     console.log('Loading labels from annotation files...');
     const labelsData = await loadAnnotationLabels(
-      `../data/fsaverage/label/${defaultAtlas.files.lh}`,
-      `../data/fsaverage/label/${defaultAtlas.files.rh}`
+      `./data/fsaverage/label/${defaultAtlas.files.lh}`,
+      `./data/fsaverage/label/${defaultAtlas.files.rh}`
     );
     setLabelsData(labelsData);
     console.log('Labels loaded:', Object.keys(labelsData).length);
     
     // Load label names for plain English conversion if available
     if (defaultAtlas.lookup) {
-      const labelNamesData = await loadLabelNames(`../data/lookups/${defaultAtlas.lookup}`);
+      const labelNamesData = await loadLabelNames(`./data/lookups/${defaultAtlas.lookup}`);
       setLabelNamesData(labelNamesData);
       if (labelNamesData) {
         console.log('Label names loaded for', defaultAtlas.name);

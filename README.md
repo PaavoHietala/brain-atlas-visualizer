@@ -42,10 +42,11 @@ python -m http.server 8000
 
 The project is configured to work with GitHub Pages:
 
-1. Ensure `./deploy/vtk_bundle.js` is committed (it's needed for the page to work)
-2. Push to GitHub
-3. Enable GitHub Pages in repository settings
-4. The visualization will be available at your GitHub Pages URL
+1. Run `npm run build` to generate `./deploy/vtk_bundle.js`
+2. Ensure the `deploy/` directory is committed (it contains the bundled application)
+3. Push to GitHub
+4. Enable GitHub Pages in repository settings, deploying from the root of the `main` branch
+5. The visualization will be available at `https://<username>.github.io/<repository-name>/`
 
 ## Project Structure
 
